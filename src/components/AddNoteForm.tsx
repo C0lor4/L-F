@@ -6,7 +6,9 @@ import { LostFoundItem, ItemStatus, StickyColor } from '../types';
 interface AddNoteFormProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (item: Omit<LostFoundItem, 'id' | 'createdAt'>) => void;
+  onSubmit: (item: Omit<LostFoundItem, 'id' | 'createdAt'>) => Promise<void>;
+  isSubmitting?: boolean;
+  submitError?: string | null;
 }
 
 const colorOptions: { value: StickyColor; label: string; bgClass: string }[] = [
@@ -18,7 +20,13 @@ const colorOptions: { value: StickyColor; label: string; bgClass: string }[] = [
   { value: 'purple', label: 'Purple', bgClass: 'bg-sticky-purple' },
 ];
 
-const AddNoteForm: React.FC<AddNoteFormProps> = ({ isOpen, onClose, onSubmit }) => {
+const AddNoteForm: React.FC<AddNoteFormProps> = ({
+  isOpen,
+  onClose,
+  onSubmit,
+  isSubmitting = false,
+  submitError = null,
+}) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [location, setLocation] = useState('');
@@ -28,23 +36,29 @@ const AddNoteForm: React.FC<AddNoteFormProps> = ({ isOpen, onClose, onSubmit }) 
   const [color, setColor] = useState<StickyColor>('yellow');
   const [imageUrl, setImageUrl] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [honeypot, setHoneypot] = useState('');
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!title.trim() || !description.trim() || !location.trim() || !contact.trim()) {
       return;
     }
 
-    onSubmit({
-      title: title.trim(),
-      description: description.trim(),
-      location: location.trim(),
-      date,
-      contact: contact.trim(),
-      status,
-      color,
-      imageUrl: imageUrl.trim() || undefined,
-    });
+    try {
+      await onSubmit({
+        title: title.trim(),
+        description: description.trim(),
+        location: location.trim(),
+        date,
+        contact: contact.trim(),
+        status,
+        color,
+        imageUrl: imageUrl.trim() || undefined,
+      });
+    } catch {
+      return;
+    }
 
     // Reset form
     setTitle('');
@@ -54,6 +68,7 @@ const AddNoteForm: React.FC<AddNoteFormProps> = ({ isOpen, onClose, onSubmit }) 
     setImageUrl('');
     setStatus('lost');
     setColor('yellow');
+    setHoneypot('');
     onClose();
   };
 
@@ -100,6 +115,7 @@ const AddNoteForm: React.FC<AddNoteFormProps> = ({ isOpen, onClose, onSubmit }) 
                 className="form-input"
                 placeholder="e.g., Blue backpack with books"
                 required
+                disabled={isSubmitting}
               />
             </div>
 
@@ -115,6 +131,7 @@ const AddNoteForm: React.FC<AddNoteFormProps> = ({ isOpen, onClose, onSubmit }) 
                 className="form-input"
                 placeholder="Describe the item in detail..."
                 required
+                disabled={isSubmitting}
               />
             </div>
 
@@ -130,6 +147,7 @@ const AddNoteForm: React.FC<AddNoteFormProps> = ({ isOpen, onClose, onSubmit }) 
                 className="form-input"
                 placeholder="e.g., Library, 2nd floor"
                 required
+                disabled={isSubmitting}
               />
             </div>
 
@@ -143,6 +161,7 @@ const AddNoteForm: React.FC<AddNoteFormProps> = ({ isOpen, onClose, onSubmit }) 
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
                 className="form-input"
+                disabled={isSubmitting}
               />
             </div>
 
@@ -158,6 +177,7 @@ const AddNoteForm: React.FC<AddNoteFormProps> = ({ isOpen, onClose, onSubmit }) 
                 className="form-input"
                 placeholder="e.g., email@example.com or phone number"
                 required
+                disabled={isSubmitting}
               />
             </div>
 
@@ -174,6 +194,7 @@ const AddNoteForm: React.FC<AddNoteFormProps> = ({ isOpen, onClose, onSubmit }) 
                     checked={status === 'lost'}
                     onChange={(e) => setStatus(e.target.value as ItemStatus)}
                     className="mr-2"
+                    disabled={isSubmitting}
                   />
                   <span>Lost</span>
                 </label>
@@ -184,6 +205,7 @@ const AddNoteForm: React.FC<AddNoteFormProps> = ({ isOpen, onClose, onSubmit }) 
                     checked={status === 'found'}
                     onChange={(e) => setStatus(e.target.value as ItemStatus)}
                     className="mr-2"
+                    disabled={isSubmitting}
                   />
                   <span>Found</span>
                 </label>
@@ -205,6 +227,7 @@ const AddNoteForm: React.FC<AddNoteFormProps> = ({ isOpen, onClose, onSubmit }) 
                       color === option.value ? 'border-gray-900 scale-110' : 'border-transparent'
                     }`}
                     title={option.label}
+                    disabled={isSubmitting}
                   />
                 ))}
               </div>
@@ -222,10 +245,28 @@ const AddNoteForm: React.FC<AddNoteFormProps> = ({ isOpen, onClose, onSubmit }) 
                   onChange={(e) => setImageUrl(e.target.value)}
                   className="form-input pr-10"
                   placeholder="https://example.com/image.jpg"
+                  disabled={isSubmitting}
                 />
                 <ImageIcon className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               </div>
             </div>
+
+            {/* Honeypot (anti-bot) */}
+            <div className="hidden" aria-hidden="true">
+              <label htmlFor="website">Website</label>
+              <input
+                id="website"
+                type="text"
+                tabIndex={-1}
+                autoComplete="off"
+                value={honeypot}
+                onChange={(e) => setHoneypot(e.target.value)}
+              />
+            </div>
+
+            {submitError && (
+              <p className="text-sm text-red-600">{submitError}</p>
+            )}
 
             {/* Submit Button */}
             <div className="flex gap-3 pt-4">
@@ -233,14 +274,16 @@ const AddNoteForm: React.FC<AddNoteFormProps> = ({ isOpen, onClose, onSubmit }) 
                 type="button"
                 onClick={onClose}
                 className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                disabled={isSubmitting}
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-60"
+                disabled={isSubmitting || !title.trim() || !description.trim() || !location.trim() || !contact.trim() || honeypot.trim().length > 0}
               >
-                Add Item
+                {isSubmitting ? 'Submitting...' : 'Add Item'}
               </button>
             </div>
           </form>
