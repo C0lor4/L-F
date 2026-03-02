@@ -13,7 +13,7 @@ A modern Lost & Found application built with React, TypeScript, and Tailwind CSS
 - 🖼️ **Image Support**: Add images to items via URL
 
 ## Getting Started
-666
+
 ### Prerequisites
 
 - Node.js (v18 or higher recommended)
