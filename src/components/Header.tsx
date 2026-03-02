@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Menu, X, Search, Filter } from 'lucide-react';
+import { Menu, X, Search } from 'lucide-react';
 import { ItemStatus } from '../types';
 
 interface HeaderProps {

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { X, Upload, Image as ImageIcon } from 'lucide-react';
+import { X, Image as ImageIcon } from 'lucide-react';
 import { LostFoundItem, ItemStatus, StickyColor } from '../types';
 
 interface AddNoteFormProps {

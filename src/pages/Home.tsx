@@ -27,7 +27,7 @@ const initialItems: LostFoundItem[] = [
     date: '2024-01-14',
     contact: '555-1234',
     status: 'lost',
-    color: 'black',
+    color: 'orange',
     createdAt: new Date().toISOString(),
   },
   {
