@@ -1,0 +1,139 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+html, body {
+  background-color: #f5f5f5;
+  color: #1f2937;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+/* Sticky note base styles */
+.sticky-note {
+  transition: all 0.3s ease;
+  cursor: pointer;
+  position: relative;
+}
+
+.sticky-note:hover {
+  transform: translateY(-4px) scale(1.02);
+  z-index: 10;
+}
+
+.sticky-note::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.3) 0%, transparent 100%);
+  pointer-events: none;
+}
+
+/* Pin effect */
+.sticky-pin {
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, #ef4444, #dc2626);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  z-index: 20;
+}
+
+/* Tape effect */
+.sticky-tape {
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  transform: translateX(-50%) rotate(-2deg);
+  width: 60px;
+  height: 25px;
+  background: rgba(255,255,255,0.4);
+  backdrop-filter: blur(2px);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+  z-index: 20;
+}
+
+/* Masonry grid layout */
+.masonry-grid {
+  column-count: 1;
+  column-gap: 1.5rem;
+}
+
+@media (min-width: 640px) {
+  .masonry-grid {
+    column-count: 2;
+  }
+}
+
+@media (min-width: 1024px) {
+  .masonry-grid {
+    column-count: 3;
+  }
+}
+
+@media (min-width: 1280px) {
+  .masonry-grid {
+    column-count: 4;
+  }
+}
+
+.masonry-item {
+  break-inside: avoid;
+  margin-bottom: 1.5rem;
+}
+
+/* Form styles */
+.form-input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 2px solid #e5e7eb;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  transition: border-color 0.2s;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+}
+
+/* Custom scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #a1a1aa #f5f5f5;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f5f5f5;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #a1a1aa;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #71717a;
+}
