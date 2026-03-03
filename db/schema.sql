@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS items (
   contact TEXT NOT NULL,
   status TEXT NOT NULL CHECK (status IN ('lost', 'found')),
   color TEXT NOT NULL CHECK (color IN ('yellow', 'pink', 'blue', 'green', 'orange', 'purple')),
+  custom_color TEXT,
   image_url TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   moderation_status TEXT NOT NULL DEFAULT 'pending' CHECK (moderation_status IN ('pending', 'approved', 'rejected'))

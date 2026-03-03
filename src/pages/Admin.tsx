@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Check, X, Trash2, LogOut, Shield, AlertCircle } from 'lucide-react';
+import { Check, X, Trash2, LogOut, Shield, AlertCircle, ArrowLeft } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { LostFoundItem } from '../types';
 
 interface AdminItem extends LostFoundItem {
   moderationStatus: 'pending' | 'approved' | 'rejected';
 }
+type ModerationCounts = Record<'pending' | 'approved' | 'rejected', number>;
 
 const API_ENDPOINT = '/api/admin';
 
@@ -18,6 +20,11 @@ const Admin: React.FC = () => {
   const [password, setPassword] = useState('');
   const [authError, setAuthError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [counts, setCounts] = useState<ModerationCounts>({
+    pending: 0,
+    approved: 0,
+    rejected: 0,
+  });
 
   const fetchItems = async () => {
     setIsLoading(true);
@@ -35,8 +42,13 @@ const Admin: React.FC = () => {
         }
         throw new Error(`Failed to load items (${response.status})`);
       }
-      const data = await response.json() as { items: AdminItem[] };
+      const data = await response.json() as { items: AdminItem[]; counts?: ModerationCounts };
       setItems(data.items);
+      setCounts(data.counts || {
+        pending: filter === 'pending' ? data.items.length : 0,
+        approved: filter === 'approved' ? data.items.length : 0,
+        rejected: filter === 'rejected' ? data.items.length : 0,
+      });
     } catch (error) {
       console.error('Failed to fetch items:', error);
       setError(error instanceof Error ? error.message : 'Failed to load items.');
@@ -65,6 +77,7 @@ const Admin: React.FC = () => {
     setIsAuthenticated(false);
     setPassword('');
     setItems([]);
+    setCounts({ pending: 0, approved: 0, rejected: 0 });
   };
 
   const handleAction = async (itemId: string, action: 'approve' | 'reject' | 'delete') => {
@@ -104,6 +117,15 @@ const Admin: React.FC = () => {
           <h1 className="text-2xl font-bold text-center text-gray-900 mb-6">
             Admin Login
           </h1>
+          <div className="mb-4 flex justify-center">
+            <Link
+              to="/"
+              className="inline-flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back to Main Page
+            </Link>
+          </div>
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -143,13 +165,22 @@ const Admin: React.FC = () => {
               <Shield className="w-8 h-8 text-blue-600" />
               <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
             </div>
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-            >
-              <LogOut className="w-5 h-5" />
-              Logout
-            </button>
+            <div className="flex items-center gap-2">
+              <Link
+                to="/"
+                className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <ArrowLeft className="w-5 h-5" />
+                Main Page
+              </Link>
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <LogOut className="w-5 h-5" />
+                Logout
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -168,9 +199,9 @@ const Admin: React.FC = () => {
               }`}
             >
               {status.charAt(0).toUpperCase() + status.slice(1)}
-              {status === 'pending' && items.length > 0 && (
+              {status === 'pending' && counts.pending > 0 && (
                 <span className="ml-2 px-2 py-0.5 bg-red-500 text-white text-xs rounded-full">
-                  {items.length}
+                  {counts.pending}
                 </span>
               )}
             </button>

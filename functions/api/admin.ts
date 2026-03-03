@@ -4,6 +4,7 @@ interface Env {
 }
 
 type ModerationStatus = 'pending' | 'approved' | 'rejected';
+type ModerationCounts = Record<ModerationStatus, number>;
 
 interface ItemRow {
   id: number;
@@ -13,7 +14,7 @@ interface ItemRow {
   date: string;
   contact: string;
   status: 'lost' | 'found';
-  color: 'yellow' | 'pink' | 'blue' | 'green' | 'orange' | 'purple';
+  color: string;
   image_url: string | null;
   created_at: string;
   moderation_status: ModerationStatus;
@@ -60,25 +61,55 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
   const url = new URL(request.url);
   const status = url.searchParams.get('status') as ModerationStatus | null;
 
-  let query = `
-    SELECT id, title, description, location, date, contact, status, color, image_url, created_at, moderation_status
-    FROM items
-  `;
   const params: string[] = [];
-
   if (status) {
-    query += ' WHERE moderation_status = ?';
     params.push(status);
   }
+  const counts: ModerationCounts = { pending: 0, approved: 0, rejected: 0 };
 
-  query += ' ORDER BY created_at DESC LIMIT 300';
+  const runQuery = async (selectColorExpr: string) => {
+    let query = `
+      SELECT id, title, description, location, date, contact, status, ${selectColorExpr} AS color, image_url, created_at, moderation_status
+      FROM items
+    `;
+    if (status) {
+      query += ' WHERE moderation_status = ?';
+    }
+    query += ' ORDER BY created_at DESC LIMIT 300';
+    const stmt = env.DB.prepare(query);
+    const boundStmt = params.reduce((acc, param) => acc.bind(param), stmt);
+    return boundStmt.all<ItemRow>();
+  };
+  const loadCounts = async () => {
+    const countRows = await env.DB
+      .prepare(`
+        SELECT moderation_status, COUNT(*) AS count
+        FROM items
+        GROUP BY moderation_status
+      `)
+      .all<{ moderation_status: ModerationStatus; count: number }>();
 
-  const stmt = env.DB.prepare(query);
-  const boundStmt = params.reduce((stmt, param) => stmt.bind(param), stmt);
-  const result = await boundStmt.all<ItemRow>();
+    for (const row of countRows.results || []) {
+      counts[row.moderation_status] = Number(row.count || 0);
+    }
+  };
 
-  const items = (result.results || []).map(toItem);
-  return json({ items });
+  try {
+    const result = await runQuery('COALESCE(custom_color, color)');
+    await loadCounts();
+    const items = (result.results || []).map(toItem);
+    return json({ items, counts });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (message.includes('no such column: custom_color')) {
+      const fallbackResult = await runQuery('color');
+      await loadCounts();
+      const items = (fallbackResult.results || []).map(toItem);
+      return json({ items, counts });
+    }
+    console.error('Failed to load admin items:', error);
+    return json({ error: 'Failed to load items.' }, 500);
+  }
 };
 
 export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {

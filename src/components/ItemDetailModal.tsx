@@ -10,7 +10,7 @@ interface ItemDetailModalProps {
   onDelete?: (id: string) => void;
 }
 
-const colorClasses = {
+const colorClasses: Record<string, string> = {
   yellow: 'bg-sticky-yellow',
   pink: 'bg-sticky-pink',
   blue: 'bg-sticky-blue',
@@ -18,6 +18,7 @@ const colorClasses = {
   orange: 'bg-sticky-orange',
   purple: 'bg-sticky-purple',
 };
+const HEX_COLOR_PATTERN = /^#[0-9a-fA-F]{6}$/;
 
 const ItemDetailModal: React.FC<ItemDetailModalProps> = ({ 
   item, 
@@ -26,6 +27,8 @@ const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
   onDelete 
 }) => {
   if (!isOpen || !item) return null;
+  const presetColorClass = colorClasses[item.color] || '';
+  const customColorStyle = HEX_COLOR_PATTERN.test(item.color) ? { backgroundColor: item.color } : undefined;
 
   return (
     <motion.div
@@ -40,7 +43,8 @@ const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.9, opacity: 0 }}
         onClick={(e) => e.stopPropagation()}
-        className={`${colorClasses[item.color]} rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto`}
+        className={`${presetColorClass} rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto`}
+        style={customColorStyle}
       >
         <div className="p-6">
           {/* Header */}

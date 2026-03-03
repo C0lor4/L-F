@@ -1,6 +1,6 @@
 export type ItemStatus = 'lost' | 'found';
 
-export type StickyColor = 'yellow' | 'pink' | 'blue' | 'green' | 'orange' | 'purple';
+export type StickyColor = string;
 
 export interface LostFoundItem {
   id: string;

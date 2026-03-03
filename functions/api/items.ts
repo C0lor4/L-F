@@ -3,7 +3,7 @@ interface Env {
 }
 
 type ItemStatus = 'lost' | 'found';
-type StickyColor = 'yellow' | 'pink' | 'blue' | 'green' | 'orange' | 'purple';
+type StickyColor = string;
 
 interface LostFoundItem {
   id: string;
@@ -36,10 +36,13 @@ const MAX_LENGTHS = {
   description: 1500,
   location: 180,
   contact: 180,
-  imageUrl: 2048,
+  imageUrl: 2_100_000,
 };
 
 const BANNED_KEYWORDS = ['viagra', 'casino', 'loan offer', 'crypto giveaway'];
+const DATA_IMAGE_PREFIX = /^data:image\/[a-zA-Z0-9.+-]+;base64,/;
+const HEX_COLOR_PATTERN = /^#[0-9a-fA-F]{6}$/;
+const PRESET_COLORS = ['yellow', 'pink', 'blue', 'green', 'orange', 'purple'] as const;
 
 const json = (body: unknown, status = 200): Response =>
   new Response(JSON.stringify(body), {
@@ -75,10 +78,17 @@ const validatePayload = (input: unknown): { ok: true; value: Omit<LostFoundItem,
   const date = normalizeText(body.date);
   const contact = normalizeText(body.contact);
   const status = normalizeText(body.status) as ItemStatus;
-  const color = normalizeText(body.color) as StickyColor;
+  const inputColor = normalizeText(body.color);
   const imageUrl = normalizeText(body.imageUrl);
 
-  if (!title || !description || !location || !date || !contact) {
+  let color: StickyColor | null = null;
+  if (PRESET_COLORS.includes(inputColor.toLowerCase() as (typeof PRESET_COLORS)[number])) {
+    color = inputColor.toLowerCase();
+  } else if (HEX_COLOR_PATTERN.test(inputColor)) {
+    color = inputColor.toLowerCase();
+  }
+
+  if (!title || !location || !date || !contact) {
     return { ok: false, error: 'Required fields are missing.' };
   }
 
@@ -94,7 +104,7 @@ const validatePayload = (input: unknown): { ok: true; value: Omit<LostFoundItem,
     return { ok: false, error: 'Invalid status.' };
   }
 
-  if (!['yellow', 'pink', 'blue', 'green', 'orange', 'purple'].includes(color)) {
+  if (!color) {
     return { ok: false, error: 'Invalid color.' };
   }
 
@@ -102,13 +112,22 @@ const validatePayload = (input: unknown): { ok: true; value: Omit<LostFoundItem,
     if (imageUrl.length > MAX_LENGTHS.imageUrl) {
       return { ok: false, error: 'Image URL is too long.' };
     }
-    try {
-      const url = new URL(imageUrl);
-      if (url.protocol !== 'http:' && url.protocol !== 'https:') {
-        return { ok: false, error: 'Image URL must use http or https.' };
+
+    const isDataImage = DATA_IMAGE_PREFIX.test(imageUrl);
+    if (isDataImage) {
+      const base64Data = imageUrl.split(',')[1] || '';
+      if (!base64Data || !/^[A-Za-z0-9+/=]+$/.test(base64Data)) {
+        return { ok: false, error: 'Image data is invalid.' };
       }
-    } catch {
-      return { ok: false, error: 'Image URL is invalid.' };
+    } else {
+      try {
+        const url = new URL(imageUrl);
+        if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+          return { ok: false, error: 'Image URL must use http or https.' };
+        }
+      } catch {
+        return { ok: false, error: 'Image URL is invalid.' };
+      }
     }
   }
 
@@ -182,18 +201,31 @@ export const onRequestGet: PagesFunction<Env> = async ({ env }) => {
     return json({ error: 'Database binding "DB" is missing.' }, 500);
   }
 
-  const rows = await env.DB
-    .prepare(`
-      SELECT id, title, description, location, date, contact, status, color, image_url, created_at
-      FROM items
-      WHERE moderation_status = 'approved'
-      ORDER BY created_at DESC
-      LIMIT 300
-    `)
-    .all<ItemRow>();
+  const runQuery = (selectColorExpr: string) =>
+    env.DB
+      .prepare(`
+        SELECT id, title, description, location, date, contact, status, ${selectColorExpr} AS color, image_url, created_at
+        FROM items
+        WHERE moderation_status = 'approved'
+        ORDER BY created_at DESC
+        LIMIT 300
+      `)
+      .all<ItemRow>();
 
-  const items = (rows.results || []).map(toItem);
-  return json({ items });
+  try {
+    const rows = await runQuery('COALESCE(custom_color, color)');
+    const items = (rows.results || []).map(toItem);
+    return json({ items });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (message.includes('no such column: custom_color')) {
+      const fallbackRows = await runQuery('color');
+      const fallbackItems = (fallbackRows.results || []).map(toItem);
+      return json({ items: fallbackItems });
+    }
+    console.error('Failed to load items:', error);
+    return json({ error: 'Failed to load items.' }, 500);
+  }
 };
 
 export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
@@ -221,42 +253,100 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
 
   const item = validated.value;
   const createdAt = new Date().toISOString();
-  const insert = await env.DB
-    .prepare(`
-      INSERT INTO items (title, description, location, date, contact, status, color, image_url, created_at, moderation_status)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `)
-    .bind(
-      item.title,
-      item.description,
-      item.location,
-      item.date,
-      item.contact,
-      item.status,
-      item.color,
-      item.imageUrl || null,
-      createdAt,
-      'pending'
-    )
-    .run();
+  const isCustomColor = HEX_COLOR_PATTERN.test(item.color);
+  try {
+    const insertWithCustomColor = () =>
+      env.DB
+        .prepare(`
+          INSERT INTO items (title, description, location, date, contact, status, color, custom_color, image_url, created_at, moderation_status)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `)
+        .bind(
+          item.title,
+          item.description,
+          item.location,
+          item.date,
+          item.contact,
+          item.status,
+          isCustomColor ? 'yellow' : item.color,
+          isCustomColor ? item.color : null,
+          item.imageUrl || null,
+          createdAt,
+          'pending'
+        )
+        .run();
 
-  const id = Number(insert.meta.last_row_id || 0);
-  if (!id) {
+    const insertLegacy = () =>
+      env.DB
+        .prepare(`
+          INSERT INTO items (title, description, location, date, contact, status, color, image_url, created_at, moderation_status)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `)
+        .bind(
+          item.title,
+          item.description,
+          item.location,
+          item.date,
+          item.contact,
+          item.status,
+          item.color,
+          item.imageUrl || null,
+          createdAt,
+          'pending'
+        )
+        .run();
+
+    let insert;
+    try {
+      insert = await insertWithCustomColor();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (!message.includes('no such column: custom_color')) {
+        throw error;
+      }
+      if (isCustomColor) {
+        return json({ error: 'Custom colors require a database migration.' }, 400);
+      }
+      insert = await insertLegacy();
+    }
+
+    const id = Number(insert.meta.last_row_id || 0);
+    if (!id) {
+      return json({ error: 'Failed to save item.' }, 500);
+    }
+
+    let row: ItemRow | null = null;
+    try {
+      row = await env.DB
+        .prepare(`
+          SELECT id, title, description, location, date, contact, status, COALESCE(custom_color, color) AS color, image_url, created_at
+          FROM items
+          WHERE id = ?
+        `)
+        .bind(id)
+        .first<ItemRow>();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (!message.includes('no such column: custom_color')) {
+        throw error;
+      }
+      row = await env.DB
+        .prepare(`
+          SELECT id, title, description, location, date, contact, status, color, image_url, created_at
+          FROM items
+          WHERE id = ?
+        `)
+        .bind(id)
+        .first<ItemRow>();
+    }
+
+    if (!row) {
+      return json({ error: 'Saved item could not be loaded.' }, 500);
+    }
+
+    return json({ item: toItem(row) }, 201);
+  } catch (error) {
+    console.error('Failed to save item:', error);
     return json({ error: 'Failed to save item.' }, 500);
   }
-
-  const row = await env.DB
-    .prepare(`
-      SELECT id, title, description, location, date, contact, status, color, image_url, created_at
-      FROM items
-      WHERE id = ?
-    `)
-    .bind(id)
-    .first<ItemRow>();
-
-  if (!row) {
-    return json({ error: 'Saved item could not be loaded.' }, 500);
-  }
-
-  return json({ item: toItem(row) }, 201);
 };

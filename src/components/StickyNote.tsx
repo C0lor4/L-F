@@ -8,7 +8,7 @@ interface StickyNoteProps {
   onClick: () => void;
 }
 
-const colorClasses = {
+const colorClasses: Record<string, string> = {
   yellow: 'bg-sticky-yellow',
   pink: 'bg-sticky-pink',
   blue: 'bg-sticky-blue',
@@ -16,11 +16,14 @@ const colorClasses = {
   orange: 'bg-sticky-orange',
   purple: 'bg-sticky-purple',
 };
+const HEX_COLOR_PATTERN = /^#[0-9a-fA-F]{6}$/;
 
 const rotation = ['-2deg', '1deg', '-1deg', '2deg', '-3deg', '3deg'];
 
 const StickyNote: React.FC<StickyNoteProps> = ({ item, onClick }) => {
   const randomRotation = rotation[Math.floor(Math.random() * rotation.length)];
+  const presetColorClass = colorClasses[item.color] || '';
+  const customColorStyle = HEX_COLOR_PATTERN.test(item.color) ? { backgroundColor: item.color } : undefined;
 
   return (
     <motion.div
@@ -33,7 +36,8 @@ const StickyNote: React.FC<StickyNoteProps> = ({ item, onClick }) => {
       }}
       transition={{ duration: 0.3 }}
       onClick={onClick}
-      className={`sticky-note ${colorClasses[item.color]} p-6 rounded-lg shadow-sticky relative min-h-[200px]`}
+      className={`sticky-note ${presetColorClass} p-6 rounded-lg shadow-sticky relative min-h-[200px]`}
+      style={customColorStyle}
     >
       <div className="sticky-pin" />
 
