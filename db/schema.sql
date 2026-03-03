@@ -29,7 +29,8 @@ CREATE INDEX IF NOT EXISTS idx_submission_logs_ip_time ON submission_logs (ip_ha
 CREATE TABLE IF NOT EXISTS item_claims (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   item_id INTEGER NOT NULL,
-  claim_location TEXT NOT NULL,
+  claimer_name TEXT,
+  claim_location TEXT,
   claim_date TEXT NOT NULL,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE CASCADE

@@ -78,7 +78,7 @@ const Home: React.FC = () => {
     setFilter(prev => ({ ...prev, status }));
   };
 
-  const handleClaimItem = async (payload: { itemId: string; claimLocation: string; claimDate: string }) => {
+  const handleClaimItem = async (payload: { itemId: string; claimDate: string; claimerNickname?: string }) => {
     const response = await fetch(CLAIM_API_ENDPOINT, {
       method: 'POST',
       headers: {

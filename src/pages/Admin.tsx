@@ -7,7 +7,7 @@ import { LostFoundItem } from '../types';
 interface AdminItem extends LostFoundItem {
   moderationStatus: 'pending' | 'approved' | 'rejected';
   claimed?: boolean;
-  claimLocation?: string;
+  claimerNickname?: string;
   claimDate?: string;
   claimCreatedAt?: string;
 }
@@ -18,6 +18,8 @@ const API_ENDPOINT = '/api/admin';
 const Admin: React.FC = () => {
   const [items, setItems] = useState<AdminItem[]>([]);
   const [filter, setFilter] = useState<'pending' | 'approved' | 'rejected'>('pending');
+  const [prioritizeClaimedLost, setPrioritizeClaimedLost] = useState(false);
+  const [prioritizeClaimedFound, setPrioritizeClaimedFound] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -107,6 +109,24 @@ const Admin: React.FC = () => {
     }
   };
 
+  const displayedItems = React.useMemo(() => {
+    if (!prioritizeClaimedLost && !prioritizeClaimedFound) return items;
+    return [...items].sort((a, b) => {
+      const aLostPriority = a.status === 'lost' && a.claimed && prioritizeClaimedLost ? 1 : 0;
+      const bLostPriority = b.status === 'lost' && b.claimed && prioritizeClaimedLost ? 1 : 0;
+      if (aLostPriority !== bLostPriority) return bLostPriority - aLostPriority;
+
+      const aFoundPriority = a.status === 'found' && a.claimed && prioritizeClaimedFound ? 1 : 0;
+      const bFoundPriority = b.status === 'found' && b.claimed && prioritizeClaimedFound ? 1 : 0;
+      if (aFoundPriority !== bFoundPriority) return bFoundPriority - aFoundPriority;
+
+      const aPriority = (aLostPriority || aFoundPriority) ? 1 : 0;
+      const bPriority = (bLostPriority || bFoundPriority) ? 1 : 0;
+      if (aPriority !== bPriority) return bPriority - aPriority;
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
+  }, [items, prioritizeClaimedLost, prioritizeClaimedFound]);
+
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-4">
@@ -191,7 +211,7 @@ const Admin: React.FC = () => {
 
       {/* Filter Tabs */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="flex gap-2 mb-6">
+        <div className="flex flex-wrap gap-2 mb-6">
           {(['pending', 'approved', 'rejected'] as const).map((status) => (
             <button
               key={status}
@@ -210,6 +230,28 @@ const Admin: React.FC = () => {
               )}
             </button>
           ))}
+          <button
+            onClick={() => setPrioritizeClaimedLost((prev) => !prev)}
+            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+              prioritizeClaimedLost
+                ? 'bg-indigo-600 text-white'
+                : 'bg-white text-gray-700 hover:bg-gray-50'
+            }`}
+            title="Put claimed lost items on top"
+          >
+            Claimed Lost First
+          </button>
+          <button
+            onClick={() => setPrioritizeClaimedFound((prev) => !prev)}
+            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+              prioritizeClaimedFound
+                ? 'bg-indigo-600 text-white'
+                : 'bg-white text-gray-700 hover:bg-gray-50'
+            }`}
+            title="Put claimed found items on top"
+          >
+            Claimed Found First
+          </button>
         </div>
 
         {/* Error Message */}
@@ -236,7 +278,7 @@ const Admin: React.FC = () => {
 
         {!isLoading && items.length > 0 && (
           <div className="space-y-4">
-            {items.map((item) => (
+            {displayedItems.map((item) => (
               <motion.div
                 key={item.id}
                 initial={{ opacity: 0, y: 10 }}
@@ -279,8 +321,8 @@ const Admin: React.FC = () => {
                       {item.claimed && (
                         <>
                           <div>
-                            <span className="font-medium text-gray-700">Claim place:</span>
-                            <span className="ml-2 text-gray-600">{item.claimLocation || '-'}</span>
+                            <span className="font-medium text-gray-700">Claimed nickname:</span>
+                            <span className="ml-2 text-gray-600">{item.claimerNickname || '-'}</span>
                           </div>
                           <div>
                             <span className="font-medium text-gray-700">Claim date:</span>

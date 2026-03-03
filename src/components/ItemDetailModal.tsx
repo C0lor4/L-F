@@ -8,7 +8,7 @@ interface ItemDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   onDelete?: (id: string) => void;
-  onClaim?: (payload: { itemId: string; claimLocation: string; claimDate: string }) => Promise<void>;
+  onClaim?: (payload: { itemId: string; claimDate: string; claimerNickname?: string }) => Promise<void>;
 }
 
 const colorClasses: Record<string, string> = {
@@ -29,9 +29,8 @@ const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
   onClaim,
 }) => {
   const [isClaimOpen, setIsClaimOpen] = React.useState(false);
-  const [claimLocation, setClaimLocation] = React.useState('');
   const [claimDate, setClaimDate] = React.useState(new Date().toISOString().split('T')[0]);
-  const [claimConfirmed, setClaimConfirmed] = React.useState(false);
+  const [claimerNickname, setClaimerNickname] = React.useState('');
   const [isClaimSubmitting, setIsClaimSubmitting] = React.useState(false);
   const [claimError, setClaimError] = React.useState<string | null>(null);
   const [claimSuccess, setClaimSuccess] = React.useState<string | null>(null);
@@ -39,9 +38,8 @@ const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
   React.useEffect(() => {
     if (!item || !isOpen) return;
     setIsClaimOpen(false);
-    setClaimLocation('');
     setClaimDate(new Date().toISOString().split('T')[0]);
-    setClaimConfirmed(false);
+    setClaimerNickname('');
     setIsClaimSubmitting(false);
     setClaimError(null);
     setClaimSuccess(null);
@@ -54,25 +52,21 @@ const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
   const handleClaimSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!onClaim) return;
-    if (!claimLocation.trim() || !claimDate || !claimConfirmed) {
-      setClaimError('Please confirm the claim and fill place/date.');
+    if (!claimDate) {
+      setClaimError('Please fill claim date.');
       return;
     }
-
-    const shouldContinue = window.confirm('Please double-check: Do you want to submit this claim?');
-    if (!shouldContinue) return;
 
     setClaimError(null);
     setIsClaimSubmitting(true);
     try {
       await onClaim({
         itemId: item.id,
-        claimLocation: claimLocation.trim(),
         claimDate,
+        claimerNickname: claimerNickname.trim() || undefined,
       });
       setClaimSuccess('Claim submitted successfully.');
       setIsClaimOpen(false);
-      setClaimConfirmed(false);
     } catch (error) {
       setClaimError(error instanceof Error ? error.message : 'Failed to submit claim.');
     } finally {
@@ -181,7 +175,7 @@ const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
             </div>
           </div>
 
-          {item.status === 'lost' && onClaim && (
+          {onClaim && (
             <div className="mt-6 pt-4 border-t border-gray-300/50">
               <button
                 type="button"
@@ -204,15 +198,14 @@ const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
                 <form onSubmit={handleClaimSubmit} className="mt-4 space-y-3">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Place of claim *
+                      Claimed by nickname (optional)
                     </label>
                     <input
                       type="text"
-                      value={claimLocation}
-                      onChange={(e) => setClaimLocation(e.target.value)}
+                      value={claimerNickname}
+                      onChange={(e) => setClaimerNickname(e.target.value)}
                       className="form-input"
-                      placeholder="e.g., Student Center front desk"
-                      required
+                      placeholder="e.g., Alex"
                       disabled={isClaimSubmitting}
                     />
                   </div>
@@ -229,22 +222,13 @@ const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
                       disabled={isClaimSubmitting}
                     />
                   </div>
-                  <label className="flex items-center gap-2 text-sm text-gray-700">
-                    <input
-                      type="checkbox"
-                      checked={claimConfirmed}
-                      onChange={(e) => setClaimConfirmed(e.target.checked)}
-                      disabled={isClaimSubmitting}
-                    />
-                    I double-checked the details and want to submit this claim.
-                  </label>
                   {claimError && (
                     <p className="text-sm text-red-600">{claimError}</p>
                   )}
                   <button
                     type="submit"
                     className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-60"
-                    disabled={isClaimSubmitting || !claimLocation.trim() || !claimDate || !claimConfirmed}
+                    disabled={isClaimSubmitting || !claimDate}
                   >
                     {isClaimSubmitting ? 'Submitting Claim...' : 'Submit Claim'}
                   </button>

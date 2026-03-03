@@ -21,6 +21,7 @@ interface ItemRow {
   claim_location: string | null;
   claim_date: string | null;
   claim_created_at: string | null;
+  claimer_name: string | null;
 }
 
 const json = (body: unknown, status = 200): Response =>
@@ -42,7 +43,7 @@ const toItem = (row: ItemRow) => ({
   createdAt: row.created_at,
   moderationStatus: row.moderation_status,
   claimed: Boolean(row.claim_created_at),
-  claimLocation: row.claim_location || undefined,
+  claimerNickname: row.claimer_name || undefined,
   claimDate: row.claim_date || undefined,
   claimCreatedAt: row.claim_created_at || undefined,
 });
@@ -77,7 +78,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
   const runQuery = async (selectColorExpr: string) => {
     let query = `
       SELECT items.id, items.title, items.description, items.location, items.date, items.contact, items.status, ${selectColorExpr} AS color, items.image_url, items.created_at, items.moderation_status,
-             item_claims.claim_location, item_claims.claim_date, item_claims.created_at AS claim_created_at
+             item_claims.claimer_name, item_claims.claim_location, item_claims.claim_date, item_claims.created_at AS claim_created_at
       FROM items
       LEFT JOIN item_claims ON item_claims.item_id = items.id
     `;

@@ -13,6 +13,9 @@ export interface LostFoundItem {
   color: StickyColor;
   imageUrl?: string;
   createdAt: string;
+  claimed?: boolean;
+  claimerNickname?: string;
+  claimDate?: string;
 }
 
 export interface FilterOptions {

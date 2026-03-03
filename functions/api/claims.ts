@@ -7,8 +7,8 @@ interface Env {
 
 interface ClaimPayload {
   itemId: string;
-  claimLocation: string;
   claimDate: string;
+  claimerNickname?: string;
 }
 
 const json = (body: unknown, status = 200): Response =>
@@ -35,8 +35,8 @@ const backupClaimToGitHub = async (
     itemStatus: 'lost' | 'found';
     itemContact: string;
     itemLocation: string;
-    claimLocation: string;
     claimDate: string;
+    claimerNickname: string | null;
     recordedAt: string;
   }
 ): Promise<void> => {
@@ -93,15 +93,15 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
 
   const body = payload as ClaimPayload;
   const itemId = normalizeText(body.itemId);
-  const claimLocation = normalizeText(body.claimLocation);
   const claimDate = normalizeText(body.claimDate);
+  const claimerNickname = normalizeText(body.claimerNickname);
 
-  if (!itemId || !claimLocation || !claimDate) {
+  if (!itemId || !claimDate) {
     return json({ error: 'Missing required fields.' }, 400);
   }
 
-  if (claimLocation.length > 180) {
-    return json({ error: 'Claim location is too long.' }, 400);
+  if (claimerNickname.length > 80) {
+    return json({ error: 'Claimed nickname is too long.' }, 400);
   }
 
   if (!/^\d{4}-\d{2}-\d{2}$/.test(claimDate)) {
@@ -133,8 +133,8 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     return json({ error: 'Item not found.' }, 404);
   }
 
-  if (item.status !== 'lost' || item.moderation_status !== 'approved') {
-    return json({ error: 'Only approved lost items can be claimed.' }, 400);
+  if (item.moderation_status !== 'approved') {
+    return json({ error: 'Only approved items can be claimed.' }, 400);
   }
 
   const existingClaim = await env.DB
@@ -150,10 +150,10 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   try {
     await env.DB
       .prepare(`
-        INSERT INTO item_claims (item_id, claim_location, claim_date, created_at)
-        VALUES (?, ?, ?, ?)
+        INSERT INTO item_claims (item_id, claimer_name, claim_location, claim_date, created_at)
+        VALUES (?, ?, ?, ?, ?)
       `)
-      .bind(id, claimLocation, claimDate, createdAt)
+      .bind(id, claimerNickname || '', null, claimDate, createdAt)
       .run();
 
     try {
@@ -163,8 +163,8 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
         itemStatus: item.status,
         itemContact: item.contact,
         itemLocation: item.location,
-        claimLocation,
         claimDate,
+        claimerNickname: claimerNickname || null,
         recordedAt: createdAt,
       });
     } catch (backupError) {

@@ -16,6 +16,7 @@ interface LostFoundItem {
   color: StickyColor;
   imageUrl?: string;
   createdAt: string;
+  claimed?: boolean;
 }
 
 interface ItemRow {
@@ -29,6 +30,7 @@ interface ItemRow {
   color: StickyColor;
   image_url: string | null;
   created_at: string;
+  claim_created_at?: string | null;
 }
 
 const MAX_LENGTHS = {
@@ -64,6 +66,7 @@ const toItem = (row: ItemRow): LostFoundItem => ({
   color: row.color,
   imageUrl: row.image_url || undefined,
   createdAt: row.created_at,
+  claimed: Boolean(row.claim_created_at),
 });
 
 const validatePayload = (input: unknown): { ok: true; value: Omit<LostFoundItem, 'id' | 'createdAt'> } | { ok: false; error: string } => {
@@ -201,27 +204,49 @@ export const onRequestGet: PagesFunction<Env> = async ({ env }) => {
     return json({ error: 'Database binding "DB" is missing.' }, 500);
   }
 
-  const runQuery = (selectColorExpr: string) =>
+  const runQuery = (selectColorExpr: string, withClaims: boolean) =>
     env.DB
       .prepare(`
-        SELECT id, title, description, location, date, contact, status, ${selectColorExpr} AS color, image_url, created_at
+        SELECT items.id, items.title, items.description, items.location, items.date, items.contact, items.status, ${selectColorExpr} AS color, items.image_url, items.created_at${
+          withClaims ? ', item_claims.created_at AS claim_created_at' : ''
+        }
         FROM items
-        WHERE moderation_status = 'approved'
-        ORDER BY created_at DESC
+        ${withClaims ? 'LEFT JOIN item_claims ON item_claims.item_id = items.id' : ''}
+        WHERE items.moderation_status = 'approved'
+        ORDER BY items.created_at DESC
         LIMIT 300
       `)
       .all<ItemRow>();
 
   try {
-    const rows = await runQuery('COALESCE(custom_color, color)');
+    const rows = await runQuery('COALESCE(items.custom_color, items.color)', true);
     const items = (rows.results || []).map(toItem);
     return json({ items });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     if (message.includes('no such column: custom_color')) {
-      const fallbackRows = await runQuery('color');
+      const fallbackRows = await runQuery('items.color', true);
       const fallbackItems = (fallbackRows.results || []).map(toItem);
       return json({ items: fallbackItems });
+    }
+    if (
+      message.includes('no such table: item_claims') ||
+      message.includes('no such column: item_claims.created_at')
+    ) {
+      try {
+        const noClaimsRows = await runQuery('COALESCE(items.custom_color, items.color)', false);
+        const noClaimsItems = (noClaimsRows.results || []).map(toItem);
+        return json({ items: noClaimsItems });
+      } catch (innerError) {
+        const innerMessage = innerError instanceof Error ? innerError.message : String(innerError);
+        if (innerMessage.includes('no such column: custom_color')) {
+          const legacyRows = await runQuery('items.color', false);
+          const legacyItems = (legacyRows.results || []).map(toItem);
+          return json({ items: legacyItems });
+        }
+        console.error('Failed to load items:', innerError);
+        return json({ error: 'Failed to load items.' }, 500);
+      }
     }
     console.error('Failed to load items:', error);
     return json({ error: 'Failed to load items.' }, 500);

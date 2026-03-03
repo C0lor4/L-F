@@ -40,6 +40,11 @@ const StickyNote: React.FC<StickyNoteProps> = ({ item, onClick }) => {
       style={customColorStyle}
     >
       <div className="sticky-pin" />
+      {item.claimed && (
+        <span className="absolute -top-3 right-3 z-20 px-2 py-0.5 rounded-full bg-blue-600 text-white text-[10px] font-semibold shadow">
+          Claimed
+        </span>
+      )}
 
       <div className="flex items-start justify-between mb-3">
         <h3 className="text-lg font-bold text-gray-900 line-clamp-2 flex-1 pr-2">
