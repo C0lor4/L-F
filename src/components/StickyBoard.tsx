@@ -37,6 +37,9 @@ const StickyBoard: React.FC<StickyBoardProps> = ({
         if (filter.status !== 'all' && item.status !== filter.status) {
           return false;
         }
+        if (!filter.showClaimed && item.claimed) {
+          return false;
+        }
         if (filter.search) {
           const searchLower = filter.search.toLowerCase();
           return (
@@ -57,16 +60,7 @@ const StickyBoard: React.FC<StickyBoardProps> = ({
           const delta = a.title.localeCompare(b.title);
           return filter.sortOrder === 'asc' ? delta : -delta;
         }
-
-        const aClaimed = a.claimed ? 1 : 0;
-        const bClaimed = b.claimed ? 1 : 0;
-        const delta = aClaimed - bClaimed;
-        if (delta !== 0) {
-          return filter.sortOrder === 'asc' ? delta : -delta;
-        }
-
-        const fallback = new Date(a.date).getTime() - new Date(b.date).getTime();
-        return filter.sortOrder === 'asc' ? fallback : -fallback;
+        return 0;
       });
   }, [items, filter]);
 
@@ -99,7 +93,7 @@ const StickyBoard: React.FC<StickyBoardProps> = ({
                 transition={{ duration: 0.3 }}
                 className="masonry-item"
               >
-                <StickyNote item={item} onClick={() => onNoteClick(item)} />
+                <StickyNote item={item} onClick={() => onNoteClick(item)} language={language} />
               </motion.div>
             ))}
           </AnimatePresence>

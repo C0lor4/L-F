@@ -18,6 +18,7 @@ const Home: React.FC = () => {
     search: '',
     sortBy: 'date',
     sortOrder: 'desc',
+    showClaimed: true,
   });
   const [isAddFormOpen, setIsAddFormOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<LostFoundItem | null>(null);
@@ -113,17 +114,17 @@ const Home: React.FC = () => {
       label: '\u6392\u5e8f',
       time: '\u65f6\u95f4',
       name: '\u540d\u79f0',
-      claimed: '\u5df2\u8ba4\u9886',
       ascending: '\u5347\u5e8f',
       descending: '\u964d\u5e8f',
+      showClaimed: '\u663e\u793a\u5df2\u8ba4\u9886',
     }
     : {
       label: 'Sort by',
       time: 'Time',
       name: 'Name',
-      claimed: 'Claimed',
       ascending: 'Ascending',
       descending: 'Descending',
+      showClaimed: 'Show Claimed',
     };
 
   const handleClaimItem = async (payload: { itemId: string; claimDate: string; claimerNickname?: string }) => {
@@ -183,7 +184,6 @@ const Home: React.FC = () => {
             >
               <option value="date">{sortText.time}</option>
               <option value="title">{sortText.name}</option>
-              <option value="claimed">{sortText.claimed}</option>
             </select>
             <button
               type="button"
@@ -191,6 +191,25 @@ const Home: React.FC = () => {
               className="px-3 py-2 text-sm font-medium border border-gray-300 rounded-lg bg-white text-gray-700 hover:bg-gray-50"
             >
               {filter.sortOrder === 'asc' ? sortText.ascending : sortText.descending}
+            </button>
+            <button
+              type="button"
+              onClick={() => setFilter((prev) => ({ ...prev, showClaimed: !prev.showClaimed }))}
+              className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium border border-gray-300 rounded-lg bg-white text-gray-700 hover:bg-gray-50"
+              title={sortText.showClaimed}
+            >
+              <span>{sortText.showClaimed}</span>
+              <span
+                className={`relative inline-block w-10 h-5 rounded-full transition-colors ${
+                  filter.showClaimed ? 'bg-blue-600' : 'bg-gray-300'
+                }`}
+              >
+                <span
+                  className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${
+                    filter.showClaimed ? 'translate-x-5' : 'translate-x-0.5'
+                  }`}
+                />
+              </span>
             </button>
           </div>
           {isLoading && (
@@ -220,6 +239,7 @@ const Home: React.FC = () => {
         onSubmit={handleAddItem}
         isSubmitting={isSubmitting}
         submitError={submitError}
+        language={language}
       />
 
       <ItemDetailModal
@@ -227,6 +247,7 @@ const Home: React.FC = () => {
         isOpen={selectedItem !== null}
         onClose={() => setSelectedItem(null)}
         onClaim={handleClaimItem}
+        language={language}
       />
     </div>
   );

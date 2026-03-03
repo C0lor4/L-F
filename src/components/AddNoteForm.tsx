@@ -3,12 +3,15 @@ import { motion } from 'framer-motion';
 import { X, Image as ImageIcon, Upload } from 'lucide-react';
 import { LostFoundItem, ItemStatus, StickyColor } from '../types';
 
+type Language = 'en' | 'cn';
+
 interface AddNoteFormProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (item: Omit<LostFoundItem, 'id' | 'createdAt'>) => Promise<void>;
   isSubmitting?: boolean;
   submitError?: string | null;
+  language: Language;
 }
 
 const colorOptions: { value: StickyColor; label: string; previewColor: string }[] = [
@@ -30,6 +33,7 @@ const AddNoteForm: React.FC<AddNoteFormProps> = ({
   onSubmit,
   isSubmitting = false,
   submitError = null,
+  language,
 }) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -46,6 +50,88 @@ const AddNoteForm: React.FC<AddNoteFormProps> = ({
 
   const [honeypot, setHoneypot] = useState('');
 
+  const text = language === 'cn'
+    ? {
+      unsupportedFormat: '\u4e0d\u652f\u6301\u7684\u6587\u4ef6\u683c\u5f0f\u3002',
+      readImageFailed: '\u8bfb\u53d6\u56fe\u7247\u5931\u8d25\u3002',
+      chooseImageFile: '\u8bf7\u9009\u62e9\u56fe\u7247\u6587\u4ef6\u3002',
+      imageTooLarge: '\u56fe\u7247\u9700\u5c0f\u4e8e 1.5MB\u3002',
+      processImageFailed: '\u5904\u7406\u56fe\u7247\u5931\u8d25\u3002',
+      anonymous: '\u533f\u540d',
+      title: '\u53d1\u5e03\u65b0\u7269\u54c1',
+      postType: '\u4f60\u60f3\u53d1\u5e03\u4ec0\u4e48\uff1f',
+      lostItem: '\u5931\u7269',
+      lostItemHint: '\u5982\u679c\u6709\u4eba\u627e\u5230\uff0c\u53ef\u4ee5\u8054\u7cfb\u4f60\u3002',
+      foundItem: '\u62db\u9886',
+      foundItemHint: '\u586b\u5199\u7269\u54c1\u653e\u7f6e\u5730\u70b9\u65b9\u4fbf\u9886\u53d6\u3002',
+      formTitle: '\u6807\u9898 *',
+      formTitlePlaceholder: '\u4f8b\u5982\uff1a\u84dd\u8272\u53cc\u80a9\u5305\uff08\u5185\u6709\u4e66\uff09',
+      description: '\u63cf\u8ff0',
+      descriptionPlaceholder: '\u8bf7\u8be6\u7ec6\u63cf\u8ff0\u7269\u54c1...',
+      lostLocation: '\u4f60\u5728\u54ea\u91cc\u4e22\u7684\uff1f *',
+      foundLocation: '\u4f60\u628a\u7269\u54c1\u653e\u5728\u54ea\u91cc\uff1f *',
+      locationPlaceholder: '\u4f8b\u5982\uff1a\u56fe\u4e66\u9986 2 \u697c',
+      date: '\u65e5\u671f',
+      contact: '\u8054\u7cfb\u65b9\u5f0f *',
+      contactOwner: '\u8054\u7cfb\u65b9\u5f0f\uff08\u4f9b\u5931\u4e3b\u8054\u7cfb\uff09 *',
+      anonymousOn: '\u5df2\u542f\u7528\u533f\u540d',
+      anonymousOff: '\u9009\u62e9\u533f\u540d',
+      contactPlaceholder: '\u4f8b\u5982\uff1a\u90ae\u7bb1\u6216\u7535\u8bdd',
+      noteColor: '\u4fbf\u7b7e\u989c\u8272',
+      customColor: '\u81ea\u5b9a\u4e49\u989c\u8272',
+      customColorSelected: '\u5df2\u9009\u62e9\u81ea\u5b9a\u4e49\u989c\u8272\uff1a',
+      uploadImage: '\u4e0a\u4f20\u56fe\u7247\uff08\u53ef\u9009\uff09',
+      chooseFromDevice: '\u4ece\u8bbe\u5907\u9009\u62e9\u56fe\u7247',
+      uploadHint: '\u652f\u6301\u624b\u673a\u548c\u7535\u8111\uff0c\u6700\u5927 1.5MB\u3002',
+      remove: '\u79fb\u9664',
+      imageUrlPlaceholder: '\u53ef\u9009\uff1ahttps://example.com/image.jpg',
+      website: '\u7f51\u7ad9',
+      cancel: '\u53d6\u6d88',
+      submitting: '\u63d0\u4ea4\u4e2d...',
+      addLost: '\u53d1\u5e03\u5931\u7269',
+      addFound: '\u53d1\u5e03\u62db\u9886',
+    }
+    : {
+      unsupportedFormat: 'Unsupported file format.',
+      readImageFailed: 'Failed to read image file.',
+      chooseImageFile: 'Please choose an image file.',
+      imageTooLarge: 'Image must be smaller than 1.5MB.',
+      processImageFailed: 'Failed to process image.',
+      anonymous: 'Anonymous',
+      title: 'Add New Item',
+      postType: 'What do you want to post?',
+      lostItem: 'Lost item',
+      lostItemHint: 'People should contact you if they find it.',
+      foundItem: 'Found item',
+      foundItemHint: 'Share where you put the item for pickup.',
+      formTitle: 'Title *',
+      formTitlePlaceholder: 'e.g., Blue backpack with books',
+      description: 'Description',
+      descriptionPlaceholder: 'Describe the item in detail...',
+      lostLocation: 'Where did you lose it? *',
+      foundLocation: 'Where did you place it? *',
+      locationPlaceholder: 'e.g., Library, 2nd floor',
+      date: 'Date',
+      contact: 'Your Contact Information *',
+      contactOwner: 'Your Contact Information (for owner) *',
+      anonymousOn: 'Anonymous enabled',
+      anonymousOff: 'Choose to stay anonymous',
+      contactPlaceholder: 'e.g., email@example.com or phone number',
+      noteColor: 'Note Color',
+      customColor: 'Custom color',
+      customColorSelected: 'Custom color selected:',
+      uploadImage: 'Upload Image (optional)',
+      chooseFromDevice: 'Choose image from device',
+      uploadHint: 'Works on phone and computer. Max size: 1.5MB.',
+      remove: 'Remove',
+      imageUrlPlaceholder: 'Optional: https://example.com/image.jpg',
+      website: 'Website',
+      cancel: 'Cancel',
+      submitting: 'Submitting...',
+      addLost: 'Add Lost Item',
+      addFound: 'Add Found Item',
+    };
+
   const readFileAsDataUrl = (file: File): Promise<string> =>
     new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -53,10 +139,10 @@ const AddNoteForm: React.FC<AddNoteFormProps> = ({
         if (typeof reader.result === 'string') {
           resolve(reader.result);
         } else {
-          reject(new Error('Unsupported file format.'));
+          reject(new Error(text.unsupportedFormat));
         }
       };
-      reader.onerror = () => reject(new Error('Failed to read image file.'));
+      reader.onerror = () => reject(new Error(text.readImageFailed));
       reader.readAsDataURL(file);
     });
 
@@ -65,13 +151,13 @@ const AddNoteForm: React.FC<AddNoteFormProps> = ({
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
-      setImageError('Please choose an image file.');
+      setImageError(text.chooseImageFile);
       e.target.value = '';
       return;
     }
 
     if (file.size > MAX_IMAGE_FILE_SIZE) {
-      setImageError('Image must be smaller than 1.5MB.');
+      setImageError(text.imageTooLarge);
       e.target.value = '';
       return;
     }
@@ -81,7 +167,7 @@ const AddNoteForm: React.FC<AddNoteFormProps> = ({
       setImageUrl(dataUrl);
       setImageError(null);
     } catch (err) {
-      setImageError(err instanceof Error ? err.message : 'Failed to process image.');
+      setImageError(err instanceof Error ? err.message : text.processImageFailed);
       e.target.value = '';
     }
   };
@@ -144,7 +230,7 @@ const AddNoteForm: React.FC<AddNoteFormProps> = ({
         <div className="p-6">
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-gray-900">Add New Item</h2>
+            <h2 className="text-2xl font-bold text-gray-900">{text.title}</h2>
             <button
               onClick={onClose}
               className="p-2 hover:bg-gray-100 rounded-full transition-colors"
@@ -157,7 +243,7 @@ const AddNoteForm: React.FC<AddNoteFormProps> = ({
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                What do you want to post?
+                {text.postType}
               </label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <button
@@ -170,9 +256,9 @@ const AddNoteForm: React.FC<AddNoteFormProps> = ({
                   }`}
                   disabled={isSubmitting}
                 >
-                  <p className="font-semibold text-gray-900">Lost item</p>
+                  <p className="font-semibold text-gray-900">{text.lostItem}</p>
                   <p className="text-xs text-gray-600 mt-1">
-                    People should contact you if they find it.
+                    {text.lostItemHint}
                   </p>
                 </button>
                 <button
@@ -185,9 +271,9 @@ const AddNoteForm: React.FC<AddNoteFormProps> = ({
                   }`}
                   disabled={isSubmitting}
                 >
-                  <p className="font-semibold text-gray-900">Found item</p>
+                  <p className="font-semibold text-gray-900">{text.foundItem}</p>
                   <p className="text-xs text-gray-600 mt-1">
-                    Share where you put the item for pickup.
+                    {text.foundItemHint}
                   </p>
                 </button>
               </div>
@@ -196,14 +282,14 @@ const AddNoteForm: React.FC<AddNoteFormProps> = ({
             {/* Title */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Title *
+                {text.formTitle}
               </label>
               <input
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 className="form-input"
-                placeholder="e.g., Blue backpack with books"
+                placeholder={text.formTitlePlaceholder}
                 required
                 disabled={isSubmitting}
               />
@@ -212,14 +298,14 @@ const AddNoteForm: React.FC<AddNoteFormProps> = ({
             {/* Description */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Description
+                {text.description}
               </label>
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 rows={4}
                 className="form-input"
-                placeholder="Describe the item in detail..."
+                placeholder={text.descriptionPlaceholder}
                 disabled={isSubmitting}
               />
             </div>
@@ -227,14 +313,14 @@ const AddNoteForm: React.FC<AddNoteFormProps> = ({
             {/* Location */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                {status === 'lost' ? 'Where did you lose it? *' : 'Where did you place it? *'}
+                {status === 'lost' ? text.lostLocation : text.foundLocation}
               </label>
               <input
                 type="text"
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
                 className="form-input"
-                placeholder="e.g., Library, 2nd floor"
+                placeholder={text.locationPlaceholder}
                 required
                 disabled={isSubmitting}
               />
@@ -243,7 +329,7 @@ const AddNoteForm: React.FC<AddNoteFormProps> = ({
             {/* Date */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Date
+                {text.date}
               </label>
               <input
                 type="date"
@@ -257,7 +343,7 @@ const AddNoteForm: React.FC<AddNoteFormProps> = ({
             {/* Contact */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                {status === 'lost' ? 'Your Contact Information *' : 'Your Contact Information (for owner) *'}
+                {status === 'lost' ? text.contact : text.contactOwner}
               </label>
               <div className="mb-2">
                 <button
@@ -270,15 +356,15 @@ const AddNoteForm: React.FC<AddNoteFormProps> = ({
                   }`}
                   disabled={isSubmitting}
                 >
-                  {isAnonymous ? 'Anonymous enabled' : 'Choose to stay anonymous'}
+                  {isAnonymous ? text.anonymousOn : text.anonymousOff}
                 </button>
               </div>
               <input
                 type="text"
-                value={isAnonymous ? 'Anonymous' : contact}
+                value={isAnonymous ? text.anonymous : contact}
                 onChange={(e) => setContact(e.target.value)}
                 className="form-input"
-                placeholder="e.g., email@example.com or phone number"
+                placeholder={text.contactPlaceholder}
                 required={!isAnonymous}
                 disabled={isSubmitting || isAnonymous}
               />
@@ -287,7 +373,7 @@ const AddNoteForm: React.FC<AddNoteFormProps> = ({
             {/* Color Selection */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Note Color
+                {text.noteColor}
               </label>
               <div className="flex gap-3 flex-wrap">
                 {colorOptions.map((option) => (
@@ -320,10 +406,10 @@ const AddNoteForm: React.FC<AddNoteFormProps> = ({
                     style={{
                       background: `linear-gradient(135deg, ${customColor} 0%, #f472b6 35%, #60a5fa 65%, #34d399 100%)`,
                     }}
-                    title="Custom color"
+                    title={text.customColor}
                     disabled={isSubmitting}
                   >
-                    <span className="sr-only">Custom color</span>
+                    <span className="sr-only">{text.customColor}</span>
                   </button>
 
                   <input
@@ -337,13 +423,13 @@ const AddNoteForm: React.FC<AddNoteFormProps> = ({
                     }}
                     className="sr-only"
                     disabled={isSubmitting}
-                    aria-label="Pick custom color"
+                    aria-label={text.customColor}
                   />
                 </div>
               </div>
               {HEX_COLOR_PATTERN.test(color) && (
                 <p className="mt-2 text-xs text-gray-600">
-                  Custom color selected: {color}
+                  {text.customColorSelected} {color}
                 </p>
               )}
             </div>
@@ -351,12 +437,12 @@ const AddNoteForm: React.FC<AddNoteFormProps> = ({
             {/* Image */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Upload Image (optional)
+                {text.uploadImage}
               </label>
               <div className="border border-gray-300 rounded-lg p-3">
                 <label className="inline-flex items-center gap-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-md cursor-pointer transition-colors">
                   <Upload className="w-4 h-4" />
-                  <span className="text-sm">Choose image from device</span>
+                  <span className="text-sm">{text.chooseFromDevice}</span>
                   <input
                     type="file"
                     accept="image/*"
@@ -366,7 +452,7 @@ const AddNoteForm: React.FC<AddNoteFormProps> = ({
                   />
                 </label>
                 <p className="mt-2 text-xs text-gray-500">
-                  Works on phone and computer. Max size: 1.5MB.
+                  {text.uploadHint}
                 </p>
 
                 {imageUrl && (
@@ -383,7 +469,7 @@ const AddNoteForm: React.FC<AddNoteFormProps> = ({
                         className="absolute top-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded"
                         disabled={isSubmitting}
                       >
-                        Remove
+                        {text.remove}
                       </button>
                     </div>
                   </div>
@@ -396,7 +482,7 @@ const AddNoteForm: React.FC<AddNoteFormProps> = ({
                       value={imageUrl}
                       onChange={(e) => setImageUrl(e.target.value)}
                       className="form-input pr-10"
-                      placeholder="Optional: https://example.com/image.jpg"
+                      placeholder={text.imageUrlPlaceholder}
                       disabled={isSubmitting}
                     />
                     <ImageIcon className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -407,7 +493,7 @@ const AddNoteForm: React.FC<AddNoteFormProps> = ({
 
             {/* Honeypot (anti-bot) */}
             <div className="hidden" aria-hidden="true">
-              <label htmlFor="website">Website</label>
+              <label htmlFor="website">{text.website}</label>
               <input
                 id="website"
                 type="text"
@@ -433,14 +519,14 @@ const AddNoteForm: React.FC<AddNoteFormProps> = ({
                 className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
                 disabled={isSubmitting}
               >
-                Cancel
+                {text.cancel}
               </button>
               <button
                 type="submit"
                 className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-60"
                 disabled={isSubmitting || !title.trim() || !location.trim() || (!isAnonymous && !contact.trim()) || honeypot.trim().length > 0}
               >
-                {isSubmitting ? 'Submitting...' : status === 'lost' ? 'Add Lost Item' : 'Add Found Item'}
+                {isSubmitting ? text.submitting : status === 'lost' ? text.addLost : text.addFound}
               </button>
             </div>
           </form>

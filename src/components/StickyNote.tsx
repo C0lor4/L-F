@@ -3,9 +3,12 @@ import { motion } from 'framer-motion';
 import { MapPin, Calendar, Phone, Tag } from 'lucide-react';
 import { LostFoundItem } from '../types';
 
+type Language = 'en' | 'cn';
+
 interface StickyNoteProps {
   item: LostFoundItem;
   onClick: () => void;
+  language: Language;
 }
 
 const colorClasses: Record<string, string> = {
@@ -20,10 +23,26 @@ const HEX_COLOR_PATTERN = /^#[0-9a-fA-F]{6}$/;
 
 const rotation = ['-2deg', '1deg', '-1deg', '2deg', '-3deg', '3deg'];
 
-const StickyNote: React.FC<StickyNoteProps> = ({ item, onClick }) => {
+const StickyNote: React.FC<StickyNoteProps> = ({ item, onClick, language }) => {
   const randomRotation = rotation[Math.floor(Math.random() * rotation.length)];
   const presetColorClass = colorClasses[item.color] || '';
   const customColorStyle = HEX_COLOR_PATTERN.test(item.color) ? { backgroundColor: item.color } : undefined;
+  const text = language === 'cn'
+    ? {
+      claimed: '\u5df2\u8ba4\u9886',
+      lost: '\u5931\u7269',
+      found: '\u62db\u9886',
+      anonymous: '\u533f\u540d',
+    }
+    : {
+      claimed: 'Claimed',
+      lost: 'Lost',
+      found: 'Found',
+      anonymous: 'Anonymous',
+    };
+  const contactDisplay = item.contact.trim().toLowerCase() === 'anonymous'
+    ? text.anonymous
+    : item.contact;
 
   return (
     <motion.div
@@ -46,7 +65,7 @@ const StickyNote: React.FC<StickyNoteProps> = ({ item, onClick }) => {
       </div>
       {item.claimed && (
         <span className="absolute -top-3 right-3 z-20 px-2 py-0.5 rounded-full bg-blue-600 text-white text-[10px] font-semibold shadow">
-          Claimed
+          {text.claimed}
         </span>
       )}
 
@@ -62,7 +81,7 @@ const StickyNote: React.FC<StickyNoteProps> = ({ item, onClick }) => {
           }`}
         >
           <Tag className="w-3 h-3" />
-          {item.status === 'lost' ? 'Lost' : 'Found'}
+          {item.status === 'lost' ? text.lost : text.found}
         </span>
       </div>
 
@@ -81,7 +100,7 @@ const StickyNote: React.FC<StickyNoteProps> = ({ item, onClick }) => {
         </div>
         <div className="flex items-center gap-2">
           <Phone className="w-3.5 h-3.5" />
-          <span className="truncate">{item.contact}</span>
+          <span className="truncate">{contactDisplay}</span>
         </div>
       </div>
 

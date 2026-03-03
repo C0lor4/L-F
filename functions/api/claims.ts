@@ -27,6 +27,21 @@ const encodeBase64 = (value: string): string => {
   return btoa(binary);
 };
 
+const toSafeFileTitle = (title: string): string => {
+  const safe = title
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 60);
+  return safe || 'item';
+};
+
+const toCommitTitle = (title: string, itemId: number): string => {
+  const trimmed = title.trim();
+  return trimmed || `item ${itemId}`;
+};
+
 const backupClaimToGitHub = async (
   env: Env,
   data: {
@@ -51,7 +66,9 @@ const backupClaimToGitHub = async (
   const mm = String(now.getUTCMonth() + 1).padStart(2, '0');
   const dd = String(now.getUTCDate()).padStart(2, '0');
   const stamp = now.toISOString().replace(/[:.]/g, '-');
-  const path = `claims/${yyyy}/${mm}/${dd}/item-${data.itemId}-${stamp}.json`;
+  const safeTitle = toSafeFileTitle(data.itemTitle);
+  const commitTitle = toCommitTitle(data.itemTitle, data.itemId);
+  const path = `claims/${yyyy}/${mm}/${dd}/${safeTitle}-${data.itemId}-${stamp}.json`;
 
   const content = JSON.stringify(data, null, 2) + '\n';
   const response = await fetch(`https://api.github.com/repos/${repo}/contents/${path}`, {
@@ -63,7 +80,7 @@ const backupClaimToGitHub = async (
       'User-Agent': 'lost-found-claims-backup',
     },
     body: JSON.stringify({
-      message: `backup: claim for item ${data.itemId}`,
+      message: `backup: claim for ${commitTitle}`,
       content: encodeBase64(content),
       branch,
     }),
