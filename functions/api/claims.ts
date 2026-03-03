@@ -94,6 +94,70 @@ const ensureClaimsSchema = async (db: D1Database): Promise<void> => {
     .run();
 };
 
+const tryInsertClaim = async (
+  db: D1Database,
+  id: number,
+  nickname: string,
+  claimDate: string,
+  createdAt: string
+): Promise<void> => {
+  const attempts: Array<{ sql: string; bind: unknown[] }> = [
+    {
+      sql: `
+        INSERT INTO item_claims (item_id, claimer_name, claim_location, claim_date, created_at)
+        VALUES (?, ?, ?, ?, ?)
+      `,
+      bind: [id, nickname, '', claimDate, createdAt],
+    },
+    {
+      sql: `
+        INSERT INTO item_claims (item_id, claimer_name, claim_location, claim_date)
+        VALUES (?, ?, ?, ?)
+      `,
+      bind: [id, nickname, '', claimDate],
+    },
+    {
+      sql: `
+        INSERT INTO item_claims (item_id, claimer_name, claim_date, created_at)
+        VALUES (?, ?, ?, ?)
+      `,
+      bind: [id, nickname, claimDate, createdAt],
+    },
+    {
+      sql: `
+        INSERT INTO item_claims (item_id, claimer_name, claim_date)
+        VALUES (?, ?, ?)
+      `,
+      bind: [id, nickname, claimDate],
+    },
+    {
+      sql: `
+        INSERT INTO item_claims (item_id, claim_date, created_at)
+        VALUES (?, ?, ?)
+      `,
+      bind: [id, claimDate, createdAt],
+    },
+    {
+      sql: `
+        INSERT INTO item_claims (item_id, claim_date)
+        VALUES (?, ?)
+      `,
+      bind: [id, claimDate],
+    },
+  ];
+
+  let lastError: unknown = null;
+  for (const attempt of attempts) {
+    try {
+      await db.prepare(attempt.sql).bind(...attempt.bind).run();
+      return;
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  throw lastError;
+};
+
 export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   if (!env.DB) {
     return json({ error: 'Database binding "DB" is missing.' }, 500);
@@ -156,6 +220,8 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     return json({ error: 'Only approved items can be claimed.' }, 400);
   }
 
+  await ensureClaimsSchema(env.DB);
+
   const existingClaim = await env.DB
     .prepare('SELECT id FROM item_claims WHERE item_id = ? LIMIT 1')
     .bind(id)
@@ -167,37 +233,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
 
   const createdAt = new Date().toISOString();
   try {
-    await ensureClaimsSchema(env.DB);
-    try {
-      await env.DB
-        .prepare(`
-          INSERT INTO item_claims (item_id, claimer_name, claim_location, claim_date, created_at)
-          VALUES (?, ?, ?, ?, ?)
-        `)
-        .bind(id, claimerNickname || '', null, claimDate, createdAt)
-        .run();
-    } catch (insertError) {
-      const message = insertError instanceof Error ? insertError.message : String(insertError);
-      if (message.includes('no such column: claim_location')) {
-        await env.DB
-          .prepare(`
-            INSERT INTO item_claims (item_id, claimer_name, claim_date, created_at)
-            VALUES (?, ?, ?, ?)
-          `)
-          .bind(id, claimerNickname || '', claimDate, createdAt)
-          .run();
-      } else if (message.includes('no such column: created_at')) {
-        await env.DB
-          .prepare(`
-            INSERT INTO item_claims (item_id, claimer_name, claim_date)
-            VALUES (?, ?, ?)
-          `)
-          .bind(id, claimerNickname || '', claimDate)
-          .run();
-      } else {
-        throw insertError;
-      }
-    }
+    await tryInsertClaim(env.DB, id, claimerNickname || '', claimDate, createdAt);
 
     try {
       await backupClaimToGitHub(env, {
@@ -215,7 +251,8 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     }
   } catch (error) {
     console.error('Failed to insert claim:', error);
-    return json({ error: 'Failed to save claim. Please update D1 schema.' }, 500);
+    const detail = error instanceof Error ? error.message : String(error);
+    return json({ error: `Failed to save claim: ${detail}` }, 500);
   }
 
   return json({ success: true }, 201);

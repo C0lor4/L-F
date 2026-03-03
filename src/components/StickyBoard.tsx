@@ -4,22 +4,36 @@ import { Plus } from 'lucide-react';
 import StickyNote from './StickyNote';
 import { LostFoundItem, FilterOptions } from '../types';
 
+type Language = 'en' | 'cn';
+
 interface StickyBoardProps {
   items: LostFoundItem[];
   filter: FilterOptions;
   onNoteClick: (item: LostFoundItem) => void;
   onAddClick: () => void;
+  language: Language;
 }
 
-const StickyBoard: React.FC<StickyBoardProps> = ({ 
-  items, 
-  filter, 
-  onNoteClick, 
-  onAddClick 
+const StickyBoard: React.FC<StickyBoardProps> = ({
+  items,
+  filter,
+  onNoteClick,
+  onAddClick,
+  language,
 }) => {
+  const text = language === 'cn'
+    ? {
+      noItems: '\u6682\u65e0\u7269\u54c1',
+      hint: '\u8bf7\u8c03\u6574\u7b5b\u9009\u6761\u4ef6\uff0c\u6216\u53d1\u5e03\u4e00\u4e2a\u65b0\u7269\u54c1',
+    }
+    : {
+      noItems: 'No items found',
+      hint: 'Try adjusting your filters or add a new item',
+    };
+
   const filteredItems = React.useMemo(() => {
     return items
-      .filter(item => {
+      .filter((item) => {
         if (filter.status !== 'all' && item.status !== filter.status) {
           return false;
         }
@@ -35,15 +49,29 @@ const StickyBoard: React.FC<StickyBoardProps> = ({
       })
       .sort((a, b) => {
         if (filter.sortBy === 'date') {
-          return new Date(b.date).getTime() - new Date(a.date).getTime();
+          const delta = new Date(a.date).getTime() - new Date(b.date).getTime();
+          return filter.sortOrder === 'asc' ? delta : -delta;
         }
-        return a.title.localeCompare(b.title);
+
+        if (filter.sortBy === 'title') {
+          const delta = a.title.localeCompare(b.title);
+          return filter.sortOrder === 'asc' ? delta : -delta;
+        }
+
+        const aClaimed = a.claimed ? 1 : 0;
+        const bClaimed = b.claimed ? 1 : 0;
+        const delta = aClaimed - bClaimed;
+        if (delta !== 0) {
+          return filter.sortOrder === 'asc' ? delta : -delta;
+        }
+
+        const fallback = new Date(a.date).getTime() - new Date(b.date).getTime();
+        return filter.sortOrder === 'asc' ? fallback : -fallback;
       });
   }, [items, filter]);
 
   return (
     <div className="relative">
-      {/* Add Button */}
       <motion.button
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.95 }}
@@ -53,14 +81,12 @@ const StickyBoard: React.FC<StickyBoardProps> = ({
         <Plus className="w-6 h-6" />
       </motion.button>
 
-      {/* Empty State */}
       {filteredItems.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-gray-500">
-          <p className="text-xl mb-2">No items found</p>
-          <p className="text-sm">Try adjusting your filters or add a new item</p>
+          <p className="text-xl mb-2">{text.noItems}</p>
+          <p className="text-sm">{text.hint}</p>
         </div>
       ) : (
-        /* Masonry Grid */
         <div className="masonry-grid px-4 sm:px-6 lg:px-8 py-8">
           <AnimatePresence mode="popLayout">
             {filteredItems.map((item) => (

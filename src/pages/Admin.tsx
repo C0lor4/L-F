@@ -12,19 +12,19 @@ interface AdminItem extends LostFoundItem {
   claimCreatedAt?: string;
 }
 type ModerationCounts = Record<'pending' | 'approved' | 'rejected', number>;
-const moderationStatusLabel: Record<'pending' | 'approved' | 'rejected', string> = {
+type AdminFilter = 'pending' | 'lost' | 'found';
+const filterLabel: Record<AdminFilter, string> = {
   pending: 'Pending',
-  approved: 'Lost',
-  rejected: 'Found (Approved)',
+  lost: 'Lost',
+  found: 'Found',
 };
 
 const API_ENDPOINT = '/api/admin';
 
 const Admin: React.FC = () => {
   const [items, setItems] = useState<AdminItem[]>([]);
-  const [filter, setFilter] = useState<'pending' | 'approved' | 'rejected'>('pending');
-  const [prioritizeClaimedLost, setPrioritizeClaimedLost] = useState(false);
-  const [prioritizeClaimedFound, setPrioritizeClaimedFound] = useState(false);
+  const [filter, setFilter] = useState<AdminFilter>('pending');
+  const [prioritizeClaimed, setPrioritizeClaimed] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -41,7 +41,8 @@ const Admin: React.FC = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch(`${API_ENDPOINT}?status=${filter}`, {
+      const queryStatus = filter === 'pending' ? 'pending' : 'approved';
+      const response = await fetch(`${API_ENDPOINT}?status=${queryStatus}`, {
         headers: {
           'Authorization': `Bearer ${password}`,
         },
@@ -54,11 +55,14 @@ const Admin: React.FC = () => {
         throw new Error(`Failed to load items (${response.status})`);
       }
       const data = await response.json() as { items: AdminItem[]; counts?: ModerationCounts };
-      setItems(data.items);
+      const filteredItems = filter === 'pending'
+        ? data.items
+        : data.items.filter((item) => item.status === filter);
+      setItems(filteredItems);
       setCounts(data.counts || {
-        pending: filter === 'pending' ? data.items.length : 0,
-        approved: filter === 'approved' ? data.items.length : 0,
-        rejected: filter === 'rejected' ? data.items.length : 0,
+        pending: queryStatus === 'pending' ? data.items.length : 0,
+        approved: queryStatus === 'approved' ? data.items.length : 0,
+        rejected: 0,
       });
     } catch (error) {
       console.error('Failed to fetch items:', error);
@@ -115,22 +119,14 @@ const Admin: React.FC = () => {
   };
 
   const displayedItems = React.useMemo(() => {
-    if (!prioritizeClaimedLost && !prioritizeClaimedFound) return items;
+    if (!prioritizeClaimed) return items;
     return [...items].sort((a, b) => {
-      const aLostPriority = a.status === 'lost' && a.claimed && prioritizeClaimedLost ? 1 : 0;
-      const bLostPriority = b.status === 'lost' && b.claimed && prioritizeClaimedLost ? 1 : 0;
-      if (aLostPriority !== bLostPriority) return bLostPriority - aLostPriority;
-
-      const aFoundPriority = a.status === 'found' && a.claimed && prioritizeClaimedFound ? 1 : 0;
-      const bFoundPriority = b.status === 'found' && b.claimed && prioritizeClaimedFound ? 1 : 0;
-      if (aFoundPriority !== bFoundPriority) return bFoundPriority - aFoundPriority;
-
-      const aPriority = (aLostPriority || aFoundPriority) ? 1 : 0;
-      const bPriority = (bLostPriority || bFoundPriority) ? 1 : 0;
+      const aPriority = a.claimed ? 1 : 0;
+      const bPriority = b.claimed ? 1 : 0;
       if (aPriority !== bPriority) return bPriority - aPriority;
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
-  }, [items, prioritizeClaimedLost, prioritizeClaimedFound]);
+  }, [items, prioritizeClaimed]);
 
   if (!isAuthenticated) {
     return (
@@ -217,7 +213,7 @@ const Admin: React.FC = () => {
       {/* Filter Tabs */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="flex flex-wrap gap-2 mb-6">
-          {(['pending', 'approved', 'rejected'] as const).map((status) => (
+          {(['pending', 'lost', 'found'] as const).map((status) => (
             <button
               key={status}
               onClick={() => setFilter(status)}
@@ -227,7 +223,7 @@ const Admin: React.FC = () => {
                   : 'bg-white text-gray-700 hover:bg-gray-50'
               }`}
             >
-              {moderationStatusLabel[status]}
+              {filterLabel[status]}
               {status === 'pending' && counts.pending > 0 && (
                 <span className="ml-2 px-2 py-0.5 bg-red-500 text-white text-xs rounded-full">
                   {counts.pending}
@@ -236,26 +232,15 @@ const Admin: React.FC = () => {
             </button>
           ))}
           <button
-            onClick={() => setPrioritizeClaimedLost((prev) => !prev)}
+            onClick={() => setPrioritizeClaimed((prev) => !prev)}
             className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-              prioritizeClaimedLost
+              prioritizeClaimed
                 ? 'bg-indigo-600 text-white'
                 : 'bg-white text-gray-700 hover:bg-gray-50'
             }`}
-            title="Put claimed lost items on top"
+            title="Put claimed items on top"
           >
-            Claimed Lost First
-          </button>
-          <button
-            onClick={() => setPrioritizeClaimedFound((prev) => !prev)}
-            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-              prioritizeClaimedFound
-                ? 'bg-indigo-600 text-white'
-                : 'bg-white text-gray-700 hover:bg-gray-50'
-            }`}
-            title="Put claimed found items on top"
-          >
-            Claimed Found First
+            Claimed First: {prioritizeClaimed ? 'On' : 'Off'}
           </button>
         </div>
 

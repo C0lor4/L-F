@@ -1,20 +1,50 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Menu, X, Search } from 'lucide-react';
 import { ItemStatus } from '../types';
+
+type Language = 'en' | 'cn';
 
 interface HeaderProps {
   onSearch: (query: string) => void;
   onFilter: (status: ItemStatus | 'all') => void;
   currentFilter: ItemStatus | 'all';
+  language: Language;
+  onLanguageToggle: () => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ 
-  onSearch, 
-  onFilter, 
-  currentFilter 
+const Header: React.FC<HeaderProps> = ({
+  onSearch,
+  onFilter,
+  currentFilter,
+  language,
+  onLanguageToggle,
 }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+
+  const text = language === 'cn'
+    ? {
+      brand: 'Lost & Found',
+      allItems: '\u5168\u90e8',
+      lost: '\u5931\u7269',
+      found: '\u62db\u9886',
+      search: '\u641c\u7d22\u7269\u54c1...',
+    }
+    : {
+      brand: 'Lost & Found',
+      allItems: 'All Items',
+      lost: 'Lost',
+      found: 'Found',
+      search: 'Search items...',
+    };
+
+  useEffect(() => {
+    if (isSearchOpen) {
+      searchInputRef.current?.focus();
+    }
+  }, [isSearchOpen]);
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     const query = e.target.value;
@@ -22,29 +52,32 @@ const Header: React.FC<HeaderProps> = ({
     onSearch(query);
   };
 
+  const toggleSearch = () => {
+    if (isSearchOpen) {
+      setIsSearchOpen(false);
+      return;
+    }
+    setIsSearchOpen(true);
+  };
+
   return (
     <header className="fixed top-0 left-0 right-0 z-40 bg-white/80 backdrop-blur-sm border-b border-gray-200 shadow-sm">
       <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-        <div className="flex items-center justify-between">
-          {/* Logo */}
-          <div className="flex items-center gap-2">
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-xl">L&F</span>
-            </div>
-            <span className="text-xl font-bold text-gray-900 hidden sm:block">
-              Lost & Found
+        <div className="relative flex items-center">
+          <div className="flex items-center min-w-[150px]">
+            <span className="text-lg sm:text-xl font-bold text-gray-900">
+              {text.brand}
             </span>
           </div>
 
-          {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center gap-6">
+          <div className="hidden md:flex items-center gap-6 absolute left-1/2 -translate-x-1/2">
             <button
               onClick={() => onFilter('all')}
               className={`text-sm font-medium transition-colors ${
                 currentFilter === 'all' ? 'text-blue-600' : 'text-gray-600 hover:text-gray-900'
               }`}
             >
-              All Items
+              {text.allItems}
             </button>
             <button
               onClick={() => onFilter('lost')}
@@ -52,7 +85,7 @@ const Header: React.FC<HeaderProps> = ({
                 currentFilter === 'lost' ? 'text-red-600' : 'text-gray-600 hover:text-gray-900'
               }`}
             >
-              Lost
+              {text.lost}
             </button>
             <button
               onClick={() => onFilter('found')}
@@ -60,38 +93,116 @@ const Header: React.FC<HeaderProps> = ({
                 currentFilter === 'found' ? 'text-green-600' : 'text-gray-600 hover:text-gray-900'
               }`}
             >
-              Found
+              {text.found}
             </button>
           </div>
 
-          {/* Search Bar */}
-          <div className="hidden md:flex items-center gap-2">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <div className="hidden md:flex items-center gap-2 ml-auto">
+            <div
+              className={`relative h-10 flex items-center rounded-full border border-gray-300 bg-white overflow-hidden transition-all duration-300 ${
+                isSearchOpen ? 'w-72 px-3' : 'w-10 justify-center'
+              }`}
+            >
+              {isSearchOpen ? (
+                <button
+                  type="button"
+                  onClick={toggleSearch}
+                  className="w-5 h-5 shrink-0 p-0 leading-none text-gray-500 hover:text-gray-700 flex items-center justify-center"
+                  aria-label="Toggle search"
+                >
+                  <Search className="block w-5 h-5" />
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={toggleSearch}
+                  className="absolute inset-0 m-auto w-10 h-10 p-0 leading-none text-gray-500 hover:text-gray-700 flex items-center justify-center"
+                  aria-label="Toggle search"
+                >
+                  <Search className="block w-5 h-5" />
+                </button>
+              )}
               <input
+                ref={searchInputRef}
                 type="text"
                 value={searchQuery}
                 onChange={handleSearch}
-                placeholder="Search items..."
-                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder={text.search}
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape') {
+                    setIsSearchOpen(false);
+                  }
+                }}
+                onBlur={() => {
+                  setTimeout(() => {
+                    setIsSearchOpen(false);
+                  }, 120);
+                }}
+                className={`ml-2 bg-transparent text-sm outline-none transition-all duration-300 ${
+                  isSearchOpen ? 'w-full opacity-100' : 'w-0 opacity-0 pointer-events-none'
+                }`}
+              />
+            </div>
+            <button
+              type="button"
+              onClick={onLanguageToggle}
+              className="px-3 py-2 text-sm font-semibold border border-gray-300 rounded-lg bg-white text-gray-700 hover:bg-gray-50"
+              title="Toggle language"
+            >
+              {language === 'en' ? 'EN' : 'CN'}
+            </button>
+          </div>
+
+          <div className="md:hidden ml-auto flex items-center gap-2">
+            <button
+              type="button"
+              onClick={toggleSearch}
+              className="w-10 h-10 p-0 leading-none border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 flex items-center justify-center"
+              aria-label="Toggle search"
+            >
+              <Search className="block w-5 h-5" />
+            </button>
+            <button
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              className="p-2 hover:bg-gray-100 rounded-lg"
+              aria-label="Toggle menu"
+            >
+              {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
+            </button>
+          </div>
+        </div>
+
+        {isSearchOpen && (
+          <div className="md:hidden mt-3">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                ref={searchInputRef}
+                type="text"
+                value={searchQuery}
+                onChange={handleSearch}
+                placeholder={text.search}
+                onBlur={() => {
+                  setTimeout(() => {
+                    setIsSearchOpen(false);
+                  }, 120);
+                }}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
           </div>
+        )}
 
-          {/* Mobile Menu Button */}
-          <button
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
-            className="md:hidden p-2 hover:bg-gray-100 rounded-lg"
-            aria-label="Toggle menu"
-          >
-            {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
-          </button>
-        </div>
-
-        {/* Mobile Navigation */}
         {isMenuOpen && (
           <div className="md:hidden mt-4 pb-4 border-t border-gray-200">
             <div className="flex flex-col space-y-3 pt-4">
+              <button
+                type="button"
+                onClick={onLanguageToggle}
+                className="text-left px-4 py-2 rounded-lg transition-colors text-gray-700 hover:bg-gray-50 border border-gray-200"
+              >
+                {language === 'en' ? 'EN' : 'CN'}
+              </button>
               <button
                 onClick={() => {
                   onFilter('all');
@@ -101,7 +212,7 @@ const Header: React.FC<HeaderProps> = ({
                   currentFilter === 'all' ? 'bg-blue-50 text-blue-600' : 'text-gray-600 hover:bg-gray-50'
                 }`}
               >
-                All Items
+                {text.allItems}
               </button>
               <button
                 onClick={() => {
@@ -112,7 +223,7 @@ const Header: React.FC<HeaderProps> = ({
                   currentFilter === 'lost' ? 'bg-red-50 text-red-600' : 'text-gray-600 hover:bg-gray-50'
                 }`}
               >
-                Lost
+                {text.lost}
               </button>
               <button
                 onClick={() => {
@@ -123,20 +234,8 @@ const Header: React.FC<HeaderProps> = ({
                   currentFilter === 'found' ? 'bg-green-50 text-green-600' : 'text-gray-600 hover:bg-gray-50'
                 }`}
               >
-                Found
+                {text.found}
               </button>
-
-              {/* Mobile Search */}
-              <div className="relative px-4">
-                <Search className="absolute left-7 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={handleSearch}
-                  placeholder="Search items..."
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
             </div>
           </div>
         )}

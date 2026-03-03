@@ -21,5 +21,6 @@ export interface LostFoundItem {
 export interface FilterOptions {
   status: ItemStatus | 'all';
   search: string;
-  sortBy: 'date' | 'title';
+  sortBy: 'date' | 'title' | 'claimed';
+  sortOrder: 'asc' | 'desc';
 }
