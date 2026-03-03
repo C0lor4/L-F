@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { MapPin, Calendar, Phone, AlertCircle, CheckCircle } from 'lucide-react';
+import { MapPin, Calendar, Phone, Tag } from 'lucide-react';
 import { LostFoundItem } from '../types';
 
 interface StickyNoteProps {
@@ -45,11 +45,16 @@ const StickyNote: React.FC<StickyNoteProps> = ({ item, onClick }) => {
         <h3 className="text-lg font-bold text-gray-900 line-clamp-2 flex-1 pr-2">
           {item.title}
         </h3>
-        {item.status === 'lost' ? (
-          <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
-        ) : (
-          <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
-        )}
+        <span
+          className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-[11px] font-semibold flex-shrink-0 ${
+            item.status === 'lost'
+              ? 'bg-red-100 text-red-700'
+              : 'bg-green-100 text-green-700'
+          }`}
+        >
+          <Tag className="w-3 h-3" />
+          {item.status === 'lost' ? 'Lost' : 'Found'}
+        </span>
       </div>
 
       <p className="text-sm text-gray-700 mb-4 line-clamp-3">

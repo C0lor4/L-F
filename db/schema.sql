@@ -24,3 +24,15 @@ CREATE TABLE IF NOT EXISTS submission_logs (
 );
 
 CREATE INDEX IF NOT EXISTS idx_submission_logs_ip_time ON submission_logs (ip_hash, created_at DESC);
+
+-- Claim records for lost items
+CREATE TABLE IF NOT EXISTS item_claims (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  item_id INTEGER NOT NULL,
+  claim_location TEXT NOT NULL,
+  claim_date TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE CASCADE
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_item_claims_item_id ON item_claims (item_id);

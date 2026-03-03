@@ -7,6 +7,7 @@ import ItemDetailModal from '../components/ItemDetailModal';
 import { LostFoundItem, FilterOptions, ItemStatus } from '../types';
 
 const API_ENDPOINT = '/api/items';
+const CLAIM_API_ENDPOINT = '/api/claims';
 
 const Home: React.FC = () => {
   const [items, setItems] = useState<LostFoundItem[]>([]);
@@ -77,6 +78,21 @@ const Home: React.FC = () => {
     setFilter(prev => ({ ...prev, status }));
   };
 
+  const handleClaimItem = async (payload: { itemId: string; claimLocation: string; claimDate: string }) => {
+    const response = await fetch(CLAIM_API_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await response.json() as { success?: boolean; error?: string };
+    if (!response.ok || !data.success) {
+      throw new Error(data.error || `Failed to claim item (${response.status})`);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       <Header 
@@ -129,6 +145,7 @@ const Home: React.FC = () => {
         item={selectedItem}
         isOpen={selectedItem !== null}
         onClose={() => setSelectedItem(null)}
+        onClaim={handleClaimItem}
       />
     </div>
   );

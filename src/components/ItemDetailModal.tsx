@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { X, MapPin, Calendar, Phone, AlertCircle, CheckCircle, Trash2 } from 'lucide-react';
+import { X, MapPin, Calendar, Phone, Tag, Trash2 } from 'lucide-react';
 import { LostFoundItem } from '../types';
 
 interface ItemDetailModalProps {
@@ -8,6 +8,7 @@ interface ItemDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   onDelete?: (id: string) => void;
+  onClaim?: (payload: { itemId: string; claimLocation: string; claimDate: string }) => Promise<void>;
 }
 
 const colorClasses: Record<string, string> = {
@@ -24,11 +25,60 @@ const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
   item, 
   isOpen, 
   onClose,
-  onDelete 
+  onDelete,
+  onClaim,
 }) => {
+  const [isClaimOpen, setIsClaimOpen] = React.useState(false);
+  const [claimLocation, setClaimLocation] = React.useState('');
+  const [claimDate, setClaimDate] = React.useState(new Date().toISOString().split('T')[0]);
+  const [claimConfirmed, setClaimConfirmed] = React.useState(false);
+  const [isClaimSubmitting, setIsClaimSubmitting] = React.useState(false);
+  const [claimError, setClaimError] = React.useState<string | null>(null);
+  const [claimSuccess, setClaimSuccess] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (!item || !isOpen) return;
+    setIsClaimOpen(false);
+    setClaimLocation('');
+    setClaimDate(new Date().toISOString().split('T')[0]);
+    setClaimConfirmed(false);
+    setIsClaimSubmitting(false);
+    setClaimError(null);
+    setClaimSuccess(null);
+  }, [item?.id, isOpen]);
+
   if (!isOpen || !item) return null;
   const presetColorClass = colorClasses[item.color] || '';
   const customColorStyle = HEX_COLOR_PATTERN.test(item.color) ? { backgroundColor: item.color } : undefined;
+
+  const handleClaimSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!onClaim) return;
+    if (!claimLocation.trim() || !claimDate || !claimConfirmed) {
+      setClaimError('Please confirm the claim and fill place/date.');
+      return;
+    }
+
+    const shouldContinue = window.confirm('Please double-check: Do you want to submit this claim?');
+    if (!shouldContinue) return;
+
+    setClaimError(null);
+    setIsClaimSubmitting(true);
+    try {
+      await onClaim({
+        itemId: item.id,
+        claimLocation: claimLocation.trim(),
+        claimDate,
+      });
+      setClaimSuccess('Claim submitted successfully.');
+      setIsClaimOpen(false);
+      setClaimConfirmed(false);
+    } catch (error) {
+      setClaimError(error instanceof Error ? error.message : 'Failed to submit claim.');
+    } finally {
+      setIsClaimSubmitting(false);
+    }
+  };
 
   return (
     <motion.div
@@ -50,14 +100,18 @@ const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
           {/* Header */}
           <div className="flex items-start justify-between mb-4">
             <div className="flex items-start gap-3 flex-1">
-              {item.status === 'lost' ? (
-                <AlertCircle className="w-6 h-6 text-red-600 flex-shrink-0 mt-1" />
-              ) : (
-                <CheckCircle className="w-6 h-6 text-green-600 flex-shrink-0 mt-1" />
-              )}
               <div>
                 <h2 className="text-2xl font-bold text-gray-900">{item.title}</h2>
-                <span className="text-sm text-gray-600 capitalize">{item.status}</span>
+                <span
+                  className={`mt-1 inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold ${
+                    item.status === 'lost'
+                      ? 'bg-red-100 text-red-700'
+                      : 'bg-green-100 text-green-700'
+                  }`}
+                >
+                  <Tag className="w-3 h-3" />
+                  {item.status === 'lost' ? 'Lost' : 'Found'}
+                </span>
               </div>
             </div>
             <div className="flex gap-2">
@@ -126,6 +180,78 @@ const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
               </div>
             </div>
           </div>
+
+          {item.status === 'lost' && onClaim && (
+            <div className="mt-6 pt-4 border-t border-gray-300/50">
+              <button
+                type="button"
+                onClick={() => {
+                  setClaimError(null);
+                  setClaimSuccess(null);
+                  setIsClaimOpen((prev) => !prev);
+                }}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-60"
+                disabled={isClaimSubmitting}
+              >
+                {isClaimOpen ? 'Cancel Claim' : 'Claim This Item'}
+              </button>
+
+              {claimSuccess && (
+                <p className="mt-3 text-sm text-green-700">{claimSuccess}</p>
+              )}
+
+              {isClaimOpen && (
+                <form onSubmit={handleClaimSubmit} className="mt-4 space-y-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Place of claim *
+                    </label>
+                    <input
+                      type="text"
+                      value={claimLocation}
+                      onChange={(e) => setClaimLocation(e.target.value)}
+                      className="form-input"
+                      placeholder="e.g., Student Center front desk"
+                      required
+                      disabled={isClaimSubmitting}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Date of claim *
+                    </label>
+                    <input
+                      type="date"
+                      value={claimDate}
+                      onChange={(e) => setClaimDate(e.target.value)}
+                      className="form-input"
+                      required
+                      disabled={isClaimSubmitting}
+                    />
+                  </div>
+                  <label className="flex items-center gap-2 text-sm text-gray-700">
+                    <input
+                      type="checkbox"
+                      checked={claimConfirmed}
+                      onChange={(e) => setClaimConfirmed(e.target.checked)}
+                      disabled={isClaimSubmitting}
+                    />
+                    I double-checked the details and want to submit this claim.
+                  </label>
+                  {claimError && (
+                    <p className="text-sm text-red-600">{claimError}</p>
+                  )}
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-60"
+                    disabled={isClaimSubmitting || !claimLocation.trim() || !claimDate || !claimConfirmed}
+                  >
+                    {isClaimSubmitting ? 'Submitting Claim...' : 'Submit Claim'}
+                  </button>
+                </form>
+              )}
+            </div>
+          )}
 
           {/* Posted Date */}
           <div className="mt-6 pt-4 border-t border-gray-300/50">

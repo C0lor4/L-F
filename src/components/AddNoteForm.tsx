@@ -40,7 +40,7 @@ const AddNoteForm: React.FC<AddNoteFormProps> = ({
   const [status, setStatus] = useState<ItemStatus>('lost');
   const [color, setColor] = useState<StickyColor>('yellow');
   const [customColor, setCustomColor] = useState(DEFAULT_CUSTOM_COLOR);
-  const [isCustomColorOpen, setIsCustomColorOpen] = useState(false);
+  const customColorInputRef = React.useRef<HTMLInputElement | null>(null);
   const [imageUrl, setImageUrl] = useState('');
   const [imageError, setImageError] = useState<string | null>(null);
 
@@ -120,7 +120,6 @@ const AddNoteForm: React.FC<AddNoteFormProps> = ({
     setStatus('lost');
     setColor('yellow');
     setCustomColor(DEFAULT_CUSTOM_COLOR);
-    setIsCustomColorOpen(false);
     setHoneypot('');
     onClose();
   };
@@ -297,9 +296,8 @@ const AddNoteForm: React.FC<AddNoteFormProps> = ({
                     type="button"
                     onClick={() => {
                       setColor(option.value);
-                      setIsCustomColorOpen(false);
                     }}
-                    className={`w-12 h-12 rounded-lg border-2 transition-transform hover:scale-110 ${
+                    className={`w-12 h-12 rounded-full border-2 transition-transform hover:scale-110 ${
                       color === option.value ? 'border-gray-900 scale-110' : 'border-transparent'
                     }`}
                     style={{ backgroundColor: option.previewColor }}
@@ -308,29 +306,28 @@ const AddNoteForm: React.FC<AddNoteFormProps> = ({
                   />
                 ))}
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsCustomColorOpen((prev) => !prev);
-                    const nextColor = HEX_COLOR_PATTERN.test(color) ? color : customColor;
-                    setColor(nextColor);
-                  }}
-                  className={`relative w-12 h-12 rounded-lg border-2 transition-transform hover:scale-110 ${
-                    HEX_COLOR_PATTERN.test(color) ? 'border-gray-900 scale-110' : 'border-transparent'
-                  }`}
-                  style={{
-                    background: `linear-gradient(135deg, ${customColor} 0%, #f472b6 35%, #60a5fa 65%, #34d399 100%)`,
-                  }}
-                  title="Custom color"
-                  disabled={isSubmitting}
-                >
-                  <span className="sr-only">Custom color</span>
-                </button>
-              </div>
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const nextColor = HEX_COLOR_PATTERN.test(color) ? color : customColor;
+                      setColor(nextColor);
+                      customColorInputRef.current?.click();
+                    }}
+                    className={`relative w-12 h-12 rounded-full border-2 transition-transform hover:scale-110 ${
+                      HEX_COLOR_PATTERN.test(color) ? 'border-gray-900 scale-110' : 'border-transparent'
+                    }`}
+                    style={{
+                      background: `linear-gradient(135deg, ${customColor} 0%, #f472b6 35%, #60a5fa 65%, #34d399 100%)`,
+                    }}
+                    title="Custom color"
+                    disabled={isSubmitting}
+                  >
+                    <span className="sr-only">Custom color</span>
+                  </button>
 
-              {isCustomColorOpen && (
-                <div className="mt-3 inline-flex items-center gap-3 rounded-lg border border-gray-300 bg-white px-3 py-2">
                   <input
+                    ref={customColorInputRef}
                     type="color"
                     value={HEX_COLOR_PATTERN.test(color) ? color : customColor}
                     onChange={(e) => {
@@ -338,13 +335,13 @@ const AddNoteForm: React.FC<AddNoteFormProps> = ({
                       setCustomColor(selected);
                       setColor(selected);
                     }}
-                    className="h-9 w-12 cursor-pointer rounded border border-gray-300 bg-transparent p-0"
+                    className="sr-only"
                     disabled={isSubmitting}
+                    aria-label="Pick custom color"
                   />
-                  <span className="text-sm text-gray-700">{HEX_COLOR_PATTERN.test(color) ? color : customColor}</span>
                 </div>
-              )}
-              {!isCustomColorOpen && HEX_COLOR_PATTERN.test(color) && (
+              </div>
+              {HEX_COLOR_PATTERN.test(color) && (
                 <p className="mt-2 text-xs text-gray-600">
                   Custom color selected: {color}
                 </p>

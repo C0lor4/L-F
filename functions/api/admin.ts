@@ -18,6 +18,9 @@ interface ItemRow {
   image_url: string | null;
   created_at: string;
   moderation_status: ModerationStatus;
+  claim_location: string | null;
+  claim_date: string | null;
+  claim_created_at: string | null;
 }
 
 const json = (body: unknown, status = 200): Response =>
@@ -38,6 +41,10 @@ const toItem = (row: ItemRow) => ({
   imageUrl: row.image_url || undefined,
   createdAt: row.created_at,
   moderationStatus: row.moderation_status,
+  claimed: Boolean(row.claim_created_at),
+  claimLocation: row.claim_location || undefined,
+  claimDate: row.claim_date || undefined,
+  claimCreatedAt: row.claim_created_at || undefined,
 });
 
 const verifyAdmin = (request: Request, adminSecret: string): boolean => {
@@ -69,13 +76,15 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
 
   const runQuery = async (selectColorExpr: string) => {
     let query = `
-      SELECT id, title, description, location, date, contact, status, ${selectColorExpr} AS color, image_url, created_at, moderation_status
+      SELECT items.id, items.title, items.description, items.location, items.date, items.contact, items.status, ${selectColorExpr} AS color, items.image_url, items.created_at, items.moderation_status,
+             item_claims.claim_location, item_claims.claim_date, item_claims.created_at AS claim_created_at
       FROM items
+      LEFT JOIN item_claims ON item_claims.item_id = items.id
     `;
     if (status) {
-      query += ' WHERE moderation_status = ?';
+      query += ' WHERE items.moderation_status = ?';
     }
-    query += ' ORDER BY created_at DESC LIMIT 300';
+    query += ' ORDER BY items.created_at DESC LIMIT 300';
     const stmt = env.DB.prepare(query);
     const boundStmt = params.reduce((acc, param) => acc.bind(param), stmt);
     return boundStmt.all<ItemRow>();

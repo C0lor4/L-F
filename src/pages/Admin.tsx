@@ -6,6 +6,10 @@ import { LostFoundItem } from '../types';
 
 interface AdminItem extends LostFoundItem {
   moderationStatus: 'pending' | 'approved' | 'rejected';
+  claimed?: boolean;
+  claimLocation?: string;
+  claimDate?: string;
+  claimCreatedAt?: string;
 }
 type ModerationCounts = Record<'pending' | 'approved' | 'rejected', number>;
 
@@ -248,6 +252,11 @@ const Admin: React.FC = () => {
                       }`}>
                         {item.status}
                       </span>
+                      {item.claimed && (
+                        <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-blue-100 text-blue-700">
+                          claimed
+                        </span>
+                      )}
                     </div>
                     <p className="text-gray-600 mb-3">{item.description}</p>
                     <div className="grid grid-cols-2 gap-4 text-sm">
@@ -267,6 +276,18 @@ const Admin: React.FC = () => {
                         <span className="font-medium text-gray-700">Posted:</span>
                         <span className="ml-2 text-gray-600">{new Date(item.createdAt).toLocaleDateString()}</span>
                       </div>
+                      {item.claimed && (
+                        <>
+                          <div>
+                            <span className="font-medium text-gray-700">Claim place:</span>
+                            <span className="ml-2 text-gray-600">{item.claimLocation || '-'}</span>
+                          </div>
+                          <div>
+                            <span className="font-medium text-gray-700">Claim date:</span>
+                            <span className="ml-2 text-gray-600">{item.claimDate ? new Date(item.claimDate).toLocaleDateString() : '-'}</span>
+                          </div>
+                        </>
+                      )}
                     </div>
                   </div>
                   <div className="flex gap-2 ml-4">
