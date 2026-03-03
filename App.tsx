@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Home from './src/pages/Home';
+import Admin from './src/pages/Admin';
 import NotFound from './src/pages/NotFound';
 
 const ScrollToTop: React.FC = () => {
@@ -18,6 +19,7 @@ const App: React.FC = () => {
       <main className="min-h-screen font-inter">
         <Routes>
           <Route path="/" element={<Home />} />
+          <Route path="/admin" element={<Admin />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </main>

@@ -186,6 +186,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ env }) => {
     .prepare(`
       SELECT id, title, description, location, date, contact, status, color, image_url, created_at
       FROM items
+      WHERE moderation_status = 'approved'
       ORDER BY created_at DESC
       LIMIT 300
     `)
@@ -222,8 +223,8 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   const createdAt = new Date().toISOString();
   const insert = await env.DB
     .prepare(`
-      INSERT INTO items (title, description, location, date, contact, status, color, image_url, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO items (title, description, location, date, contact, status, color, image_url, created_at, moderation_status)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `)
     .bind(
       item.title,
@@ -234,7 +235,8 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
       item.status,
       item.color,
       item.imageUrl || null,
-      createdAt
+      createdAt,
+      'pending'
     )
     .run();
 
