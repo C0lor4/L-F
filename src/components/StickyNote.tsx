@@ -39,7 +39,11 @@ const StickyNote: React.FC<StickyNoteProps> = ({ item, onClick }) => {
       className={`sticky-note ${presetColorClass} p-6 rounded-lg shadow-sticky relative min-h-[200px]`}
       style={customColorStyle}
     >
-      <div className="sticky-pin" />
+      <div className="sticky-pin" aria-hidden="true">
+        <span className="pin-head pin-head-top" />
+        <span className="pin-stem" />
+        <span className="pin-head pin-head-bottom" />
+      </div>
       {item.claimed && (
         <span className="absolute -top-3 right-3 z-20 px-2 py-0.5 rounded-full bg-blue-600 text-white text-[10px] font-semibold shadow">
           Claimed
