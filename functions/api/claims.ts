@@ -75,6 +75,25 @@ const backupClaimToGitHub = async (
   }
 };
 
+const ensureClaimsSchema = async (db: D1Database): Promise<void> => {
+  await db
+    .prepare(`
+      CREATE TABLE IF NOT EXISTS item_claims (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        item_id INTEGER NOT NULL,
+        claimer_name TEXT,
+        claim_location TEXT,
+        claim_date TEXT NOT NULL,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE CASCADE
+      )
+    `)
+    .run();
+  await db
+    .prepare('CREATE UNIQUE INDEX IF NOT EXISTS idx_item_claims_item_id ON item_claims (item_id)')
+    .run();
+};
+
 export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   if (!env.DB) {
     return json({ error: 'Database binding "DB" is missing.' }, 500);
@@ -148,13 +167,37 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
 
   const createdAt = new Date().toISOString();
   try {
-    await env.DB
-      .prepare(`
-        INSERT INTO item_claims (item_id, claimer_name, claim_location, claim_date, created_at)
-        VALUES (?, ?, ?, ?, ?)
-      `)
-      .bind(id, claimerNickname || '', null, claimDate, createdAt)
-      .run();
+    await ensureClaimsSchema(env.DB);
+    try {
+      await env.DB
+        .prepare(`
+          INSERT INTO item_claims (item_id, claimer_name, claim_location, claim_date, created_at)
+          VALUES (?, ?, ?, ?, ?)
+        `)
+        .bind(id, claimerNickname || '', null, claimDate, createdAt)
+        .run();
+    } catch (insertError) {
+      const message = insertError instanceof Error ? insertError.message : String(insertError);
+      if (message.includes('no such column: claim_location')) {
+        await env.DB
+          .prepare(`
+            INSERT INTO item_claims (item_id, claimer_name, claim_date, created_at)
+            VALUES (?, ?, ?, ?)
+          `)
+          .bind(id, claimerNickname || '', claimDate, createdAt)
+          .run();
+      } else if (message.includes('no such column: created_at')) {
+        await env.DB
+          .prepare(`
+            INSERT INTO item_claims (item_id, claimer_name, claim_date)
+            VALUES (?, ?, ?)
+          `)
+          .bind(id, claimerNickname || '', claimDate)
+          .run();
+      } else {
+        throw insertError;
+      }
+    }
 
     try {
       await backupClaimToGitHub(env, {

@@ -12,6 +12,11 @@ interface AdminItem extends LostFoundItem {
   claimCreatedAt?: string;
 }
 type ModerationCounts = Record<'pending' | 'approved' | 'rejected', number>;
+const moderationStatusLabel: Record<'pending' | 'approved' | 'rejected', string> = {
+  pending: 'Pending',
+  approved: 'Lost',
+  rejected: 'Found (Approved)',
+};
 
 const API_ENDPOINT = '/api/admin';
 
@@ -222,7 +227,7 @@ const Admin: React.FC = () => {
                   : 'bg-white text-gray-700 hover:bg-gray-50'
               }`}
             >
-              {status.charAt(0).toUpperCase() + status.slice(1)}
+              {moderationStatusLabel[status]}
               {status === 'pending' && counts.pending > 0 && (
                 <span className="ml-2 px-2 py-0.5 bg-red-500 text-white text-xs rounded-full">
                   {counts.pending}
