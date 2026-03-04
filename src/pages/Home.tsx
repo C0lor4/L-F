@@ -26,7 +26,7 @@ const Home: React.FC = () => {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [language, setLanguage] = useState<Language>('en');
+  const [language, setLanguage] = useState<Language>('cn');
 
   const fetchItems = async () => {
     setLoadError(null);
