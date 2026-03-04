@@ -46,6 +46,10 @@ const AddNoteForm: React.FC<AddNoteFormProps> = ({
   const [color, setColor] = useState<StickyColor>('yellow');
   const [customColor, setCustomColor] = useState(DEFAULT_CUSTOM_COLOR);
   const customColorInputRef = React.useRef<HTMLInputElement | null>(null);
+  const titleInputRef = React.useRef<HTMLInputElement | null>(null);
+  const locationInputRef = React.useRef<HTMLInputElement | null>(null);
+  const dateInputRef = React.useRef<HTMLInputElement | null>(null);
+  const contactInputRef = React.useRef<HTMLInputElement | null>(null);
   const [imageUrl, setImageUrl] = useState('');
   const [imageError, setImageError] = useState<string | null>(null);
   const [touched, setTouched] = useState({
@@ -196,13 +200,30 @@ const AddNoteForm: React.FC<AddNoteFormProps> = ({
     const normalizedContact = isAnonymous ? 'Anonymous' : contact.trim();
     const normalizedBonusPrice = status === 'lost' ? bonusPrice.trim() : '';
 
+    const missingTitle = !normalizedTitle;
+    const missingLocation = !normalizedLocation;
+    const missingDate = !date;
+    const missingContact = !isAnonymous && !normalizedContact;
+
     if (!normalizedTitle || !normalizedLocation || !date || !normalizedContact) {
       setTouched({
-        title: true,
-        location: true,
-        date: true,
-        contact: true,
+        title: missingTitle,
+        location: missingLocation,
+        date: missingDate,
+        contact: missingContact,
       });
+
+      const firstMissingInput =
+        (missingTitle && titleInputRef.current) ||
+        (missingLocation && locationInputRef.current) ||
+        (missingDate && dateInputRef.current) ||
+        (missingContact && contactInputRef.current) ||
+        null;
+
+      if (firstMissingInput) {
+        firstMissingInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        setTimeout(() => firstMissingInput.focus(), 160);
+      }
       return;
     }
 
@@ -311,13 +332,13 @@ const AddNoteForm: React.FC<AddNoteFormProps> = ({
                 {text.formTitle} <span className="text-red-600">*</span>
               </label>
               <input
+                ref={titleInputRef}
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 onBlur={() => setTouched((prev) => ({ ...prev, title: true }))}
                 className="form-input"
                 placeholder={text.formTitlePlaceholder}
-                required
                 disabled={isSubmitting}
               />
               {touched.title && !title.trim() && (
@@ -344,13 +365,13 @@ const AddNoteForm: React.FC<AddNoteFormProps> = ({
                 {status === 'lost' ? text.lostLocation : text.foundLocation} <span className="text-red-600">*</span>
               </label>
               <input
+                ref={locationInputRef}
                 type="text"
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
                 onBlur={() => setTouched((prev) => ({ ...prev, location: true }))}
                 className="form-input"
                 placeholder={text.locationPlaceholder}
-                required
                 disabled={isSubmitting}
               />
               {touched.location && !location.trim() && (
@@ -379,12 +400,12 @@ const AddNoteForm: React.FC<AddNoteFormProps> = ({
                 {text.date} <span className="text-red-600">*</span>
               </label>
               <input
+                ref={dateInputRef}
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
                 onBlur={() => setTouched((prev) => ({ ...prev, date: true }))}
                 className="form-input"
-                required
                 disabled={isSubmitting}
               />
               {touched.date && !date && (
@@ -411,13 +432,13 @@ const AddNoteForm: React.FC<AddNoteFormProps> = ({
                 </button>
               </div>
               <input
+                ref={contactInputRef}
                 type="text"
                 value={isAnonymous ? text.anonymous : contact}
                 onChange={(e) => setContact(e.target.value)}
                 onBlur={() => setTouched((prev) => ({ ...prev, contact: true }))}
                 className="form-input"
                 placeholder={text.contactPlaceholder}
-                required={!isAnonymous}
                 disabled={isSubmitting || isAnonymous}
               />
               {touched.contact && !isAnonymous && !contact.trim() && (
@@ -569,10 +590,6 @@ const AddNoteForm: React.FC<AddNoteFormProps> = ({
                 className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-60"
                 disabled={
                   isSubmitting ||
-                  !title.trim() ||
-                  !location.trim() ||
-                  !date ||
-                  (!isAnonymous && !contact.trim()) ||
                   honeypot.trim().length > 0
                 }
               >

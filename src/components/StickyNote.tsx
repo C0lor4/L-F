@@ -34,12 +34,24 @@ const getCustomHighlightStyle = (hexColor: string): React.CSSProperties => {
   const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
 
   if (luminance > 0.75) {
-    return { backgroundColor: 'rgba(251, 191, 36, 0.7)', color: '#111827' };
+    return {
+      backgroundColor: 'rgba(251, 191, 36, 0.8)',
+      color: '#111827',
+      boxShadow: 'inset 0 0 0 1px rgba(180, 83, 9, 0.5)',
+    };
   }
   if (luminance > 0.5) {
-    return { backgroundColor: 'rgba(255, 255, 255, 0.65)', color: '#111827' };
+    return {
+      backgroundColor: 'rgba(255, 255, 255, 0.75)',
+      color: '#111827',
+      boxShadow: 'inset 0 0 0 1px rgba(55, 65, 81, 0.45)',
+    };
   }
-  return { backgroundColor: 'rgba(255, 255, 255, 0.45)', color: '#111827' };
+  return {
+    backgroundColor: 'rgba(255, 255, 255, 0.55)',
+    color: '#111827',
+    boxShadow: 'inset 0 0 0 1px rgba(255, 255, 255, 0.55)',
+  };
 };
 
 const StickyNote: React.FC<StickyNoteProps> = ({ item, onClick, language, searchQuery = '' }) => {
@@ -47,14 +59,14 @@ const StickyNote: React.FC<StickyNoteProps> = ({ item, onClick, language, search
   const presetColorClass = colorClasses[item.color] || '';
   const customColorStyle = HEX_COLOR_PATTERN.test(item.color) ? { backgroundColor: item.color } : undefined;
   const presetHighlightClass: Record<string, string> = {
-    yellow: 'bg-amber-300/70 text-gray-900',
-    pink: 'bg-fuchsia-200/80 text-gray-900',
-    blue: 'bg-blue-200/80 text-gray-900',
-    green: 'bg-emerald-200/80 text-gray-900',
-    orange: 'bg-orange-300/75 text-gray-900',
-    purple: 'bg-violet-200/80 text-gray-900',
+    yellow: 'bg-sky-200/90 text-gray-900 ring-1 ring-sky-500/70',
+    pink: 'bg-amber-200/90 text-gray-900 ring-1 ring-amber-500/70',
+    blue: 'bg-amber-200/95 text-gray-900 ring-1 ring-amber-500/80',
+    green: 'bg-amber-200/95 text-gray-900 ring-1 ring-amber-500/80',
+    orange: 'bg-sky-200/90 text-gray-900 ring-1 ring-sky-500/70',
+    purple: 'bg-amber-100/95 text-gray-900 ring-1 ring-amber-500/75',
   };
-  const highlightClassName = `rounded px-1 py-0.5 ${presetHighlightClass[item.color] || 'bg-amber-300/70 text-gray-900'}`;
+  const highlightClassName = `rounded-sm px-0.5 py-0 font-semibold ${presetHighlightClass[item.color] || 'bg-amber-200/95 text-gray-900 ring-1 ring-amber-500/80'}`;
   const customHighlightStyle = HEX_COLOR_PATTERN.test(item.color) ? getCustomHighlightStyle(item.color) : undefined;
   const queryTokens = searchQuery
     .trim()

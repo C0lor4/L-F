@@ -58,6 +58,16 @@ const json = (body: unknown, status = 200): Response =>
 const normalizeText = (value: unknown): string =>
   typeof value === 'string' ? value.trim() : '';
 
+const hasMissingColumnError = (message: string, column: string): boolean => {
+  const normalized = message.toLowerCase();
+  return (
+    normalized.includes(`no such column: ${column}`) ||
+    normalized.includes(`no such column: items.${column}`) ||
+    normalized.includes(`has no column named ${column}`) ||
+    normalized.includes(`table items has no column named ${column}`)
+  );
+};
+
 const toItem = (row: ItemRow): LostFoundItem => ({
   id: String(row.id),
   title: row.title,
@@ -250,10 +260,8 @@ export const onRequestGet: PagesFunction<Env> = async ({ env }) => {
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         const isCompatError =
-          message.includes('no such column: custom_color') ||
-          message.includes('no such column: items.custom_color') ||
-          message.includes('no such column: bonus_price') ||
-          message.includes('no such column: items.bonus_price') ||
+          hasMissingColumnError(message, 'custom_color') ||
+          hasMissingColumnError(message, 'bonus_price') ||
           message.includes('no such table: item_claims') ||
           message.includes('no such column: item_claims.created_at');
         if (!isCompatError) {
@@ -384,8 +392,8 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
       insert = await insertWithCustomColor();
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      const missingCustom = message.includes('no such column: custom_color');
-      const missingBonus = message.includes('no such column: bonus_price');
+      const missingCustom = hasMissingColumnError(message, 'custom_color');
+      const missingBonus = hasMissingColumnError(message, 'bonus_price');
 
       if (missingCustom && isCustomColor) {
         return json({ error: 'Custom colors require a database migration.' }, 400);
@@ -419,7 +427,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
         .first<ItemRow>();
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      if (!message.includes('no such column: custom_color') && !message.includes('no such column: bonus_price')) {
+      if (!hasMissingColumnError(message, 'custom_color') && !hasMissingColumnError(message, 'bonus_price')) {
         throw error;
       }
       const fallbackQueries = [
