@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { X, MapPin, Calendar, Phone, Tag, Trash2 } from 'lucide-react';
+import { X, MapPin, Calendar, Phone, Tag, Trash2, Gift } from 'lucide-react';
 import { LostFoundItem } from '../types';
 
 type Language = 'en' | 'cn';
@@ -62,6 +62,7 @@ const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
       location: '\u5730\u70b9',
       date: '\u65e5\u671f',
       contact: '\u8054\u7cfb\u65b9\u5f0f',
+      reward: '\u8d4f\u91d1',
       anonymous: '\u533f\u540d',
       cancelClaim: '\u53d6\u6d88\u8ba4\u9886',
       claimItem: '\u8ba4\u9886\u8fd9\u4e2a\u7269\u54c1',
@@ -84,6 +85,7 @@ const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
       location: 'Location',
       date: 'Date',
       contact: 'Contact',
+      reward: 'Reward',
       anonymous: 'Anonymous',
       cancelClaim: 'Cancel Claim',
       claimItem: 'Claim This Item',
@@ -225,6 +227,16 @@ const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
                 <p className="text-gray-700">{contactDisplay}</p>
               </div>
             </div>
+
+            {item.status === 'lost' && item.bonusPrice && (
+              <div className="flex items-start gap-3">
+                <Gift className="w-5 h-5 text-gray-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-gray-900">{text.reward}</p>
+                  <p className="text-gray-700">{item.bonusPrice}</p>
+                </div>
+              </div>
+            )}
           </div>
 
           {onClaim && (

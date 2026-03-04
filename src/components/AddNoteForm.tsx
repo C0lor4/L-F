@@ -38,6 +38,7 @@ const AddNoteForm: React.FC<AddNoteFormProps> = ({
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [location, setLocation] = useState('');
+  const [bonusPrice, setBonusPrice] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [contact, setContact] = useState('');
   const [isAnonymous, setIsAnonymous] = useState(false);
@@ -47,7 +48,12 @@ const AddNoteForm: React.FC<AddNoteFormProps> = ({
   const customColorInputRef = React.useRef<HTMLInputElement | null>(null);
   const [imageUrl, setImageUrl] = useState('');
   const [imageError, setImageError] = useState<string | null>(null);
-
+  const [touched, setTouched] = useState({
+    title: false,
+    location: false,
+    date: false,
+    contact: false,
+  });
   const [honeypot, setHoneypot] = useState('');
 
   const text = language === 'cn'
@@ -64,27 +70,32 @@ const AddNoteForm: React.FC<AddNoteFormProps> = ({
       lostItemHint: '\u5982\u679c\u6709\u4eba\u627e\u5230\uff0c\u53ef\u4ee5\u8054\u7cfb\u4f60\u3002',
       foundItem: '\u62db\u9886',
       foundItemHint: '\u586b\u5199\u7269\u54c1\u653e\u7f6e\u5730\u70b9\u65b9\u4fbf\u9886\u53d6\u3002',
-      formTitle: '\u6807\u9898 *',
+      requiredNotice: '\u7ea2\u8272\u6807\u8bb0\u4e3a\u5fc5\u586b\u9879\u3002',
+      requiredTag: '\u5fc5\u586b',
+      requiredHint: '\u8fd9\u662f\u5fc5\u586b\u9879\u3002',
+      formTitle: '\u6807\u9898',
       formTitlePlaceholder: '\u4f8b\u5982\uff1a\u84dd\u8272\u53cc\u80a9\u5305\uff08\u5185\u6709\u4e66\uff09',
       description: '\u63cf\u8ff0',
       descriptionPlaceholder: '\u8bf7\u8be6\u7ec6\u63cf\u8ff0\u7269\u54c1...',
-      lostLocation: '\u4f60\u5728\u54ea\u91cc\u4e22\u7684\uff1f *',
-      foundLocation: '\u4f60\u628a\u7269\u54c1\u653e\u5728\u54ea\u91cc\uff1f *',
+      lostLocation: '\u4f60\u5728\u54ea\u91cc\u4e22\u7684\uff1f',
+      foundLocation: '\u4f60\u628a\u7269\u54c1\u653e\u5728\u54ea\u91cc\uff1f',
       locationPlaceholder: '\u4f8b\u5982\uff1a\u56fe\u4e66\u9986 2 \u697c',
+      bonusPrice: '\u8d4f\u91d1',
+      bonusPricePlaceholder: '\u4f8b\u5982\uff1a\u4e00\u676f\u5976\u8336\u6216 \u00a550',
       date: '\u65e5\u671f',
-      contact: '\u8054\u7cfb\u65b9\u5f0f *',
-      contactOwner: '\u8054\u7cfb\u65b9\u5f0f\uff08\u4f9b\u5931\u4e3b\u8054\u7cfb\uff09 *',
+      contact: '\u8054\u7cfb\u65b9\u5f0f',
+      contactOwner: '\u8054\u7cfb\u65b9\u5f0f\uff08\u4f9b\u5931\u4e3b\u8054\u7cfb\uff09',
       anonymousOn: '\u5df2\u542f\u7528\u533f\u540d',
       anonymousOff: '\u9009\u62e9\u533f\u540d',
-      contactPlaceholder: '\u4f8b\u5982\uff1a\u90ae\u7bb1\u6216\u7535\u8bdd',
-      noteColor: '\u4fbf\u7b7e\u989c\u8272',
-      customColor: '\u81ea\u5b9a\u4e49\u989c\u8272',
-      customColorSelected: '\u5df2\u9009\u62e9\u81ea\u5b9a\u4e49\u989c\u8272\uff1a',
-      uploadImage: '\u4e0a\u4f20\u56fe\u7247\uff08\u53ef\u9009\uff09',
+      contactPlaceholder: '\u4f8b\u5982\uff1a\u5fae\u4fe1\u53f7\u6216\u7535\u8bdd',
+      uploadImage: '\u4e0a\u4f20\u56fe\u7247',
       chooseFromDevice: '\u4ece\u8bbe\u5907\u9009\u62e9\u56fe\u7247',
       uploadHint: '\u652f\u6301\u624b\u673a\u548c\u7535\u8111\uff0c\u6700\u5927 1.5MB\u3002',
       remove: '\u79fb\u9664',
       imageUrlPlaceholder: '\u53ef\u9009\uff1ahttps://example.com/image.jpg',
+      noteColor: '\u4fbf\u7b7e\u989c\u8272',
+      customColor: '\u81ea\u5b9a\u4e49\u989c\u8272',
+      customColorSelected: '\u5df2\u9009\u62e9\u81ea\u5b9a\u4e49\u989c\u8272\uff1a',
       website: '\u7f51\u7ad9',
       cancel: '\u53d6\u6d88',
       submitting: '\u63d0\u4ea4\u4e2d...',
@@ -104,27 +115,32 @@ const AddNoteForm: React.FC<AddNoteFormProps> = ({
       lostItemHint: 'People should contact you if they find it.',
       foundItem: 'Found item',
       foundItemHint: 'Share where you put the item for pickup.',
-      formTitle: 'Title *',
+      requiredNotice: 'Fields marked in red are required.',
+      requiredTag: 'Required',
+      requiredHint: 'This field is required.',
+      formTitle: 'Title',
       formTitlePlaceholder: 'e.g., Blue backpack with books',
       description: 'Description',
       descriptionPlaceholder: 'Describe the item in detail...',
-      lostLocation: 'Where did you lose it? *',
-      foundLocation: 'Where did you place it? *',
+      lostLocation: 'Where did you lose it?',
+      foundLocation: 'Where did you place it?',
       locationPlaceholder: 'e.g., Library, 2nd floor',
+      bonusPrice: 'Bonus price',
+      bonusPricePlaceholder: 'e.g., One milk tea or \u00a510',
       date: 'Date',
-      contact: 'Your Contact Information *',
-      contactOwner: 'Your Contact Information (for owner) *',
+      contact: 'Your Contact Information',
+      contactOwner: 'Your Contact Information (for owner)',
       anonymousOn: 'Anonymous enabled',
       anonymousOff: 'Choose to stay anonymous',
-      contactPlaceholder: 'e.g., email@example.com or phone number',
-      noteColor: 'Note Color',
-      customColor: 'Custom color',
-      customColorSelected: 'Custom color selected:',
-      uploadImage: 'Upload Image (optional)',
+      contactPlaceholder: 'e.g. phone number or wechat ID',
+      uploadImage: 'Upload Image',
       chooseFromDevice: 'Choose image from device',
       uploadHint: 'Works on phone and computer. Max size: 1.5MB.',
       remove: 'Remove',
       imageUrlPlaceholder: 'Optional: https://example.com/image.jpg',
+      noteColor: 'Note Color',
+      customColor: 'Custom color',
+      customColorSelected: 'Custom color selected:',
       website: 'Website',
       cancel: 'Cancel',
       submitting: 'Submitting...',
@@ -175,18 +191,29 @@ const AddNoteForm: React.FC<AddNoteFormProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    const normalizedTitle = title.trim();
+    const normalizedLocation = location.trim();
     const normalizedContact = isAnonymous ? 'Anonymous' : contact.trim();
-    if (!title.trim() || !location.trim() || !normalizedContact) {
+    const normalizedBonusPrice = status === 'lost' ? bonusPrice.trim() : '';
+
+    if (!normalizedTitle || !normalizedLocation || !date || !normalizedContact) {
+      setTouched({
+        title: true,
+        location: true,
+        date: true,
+        contact: true,
+      });
       return;
     }
 
     try {
       await onSubmit({
-        title: title.trim(),
+        title: normalizedTitle,
         description: description.trim(),
-        location: location.trim(),
+        location: normalizedLocation,
         date,
         contact: normalizedContact,
+        bonusPrice: normalizedBonusPrice || undefined,
         status,
         color,
         imageUrl: imageUrl.trim() || undefined,
@@ -195,10 +222,10 @@ const AddNoteForm: React.FC<AddNoteFormProps> = ({
       return;
     }
 
-    // Reset form
     setTitle('');
     setDescription('');
     setLocation('');
+    setBonusPrice('');
     setContact('');
     setIsAnonymous(false);
     setImageUrl('');
@@ -206,6 +233,12 @@ const AddNoteForm: React.FC<AddNoteFormProps> = ({
     setStatus('lost');
     setColor('yellow');
     setCustomColor(DEFAULT_CUSTOM_COLOR);
+    setTouched({
+      title: false,
+      location: false,
+      date: false,
+      contact: false,
+    });
     setHoneypot('');
     onClose();
   };
@@ -228,7 +261,6 @@ const AddNoteForm: React.FC<AddNoteFormProps> = ({
         className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
       >
         <div className="p-6">
-          {/* Header */}
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-bold text-gray-900">{text.title}</h2>
             <button
@@ -239,7 +271,6 @@ const AddNoteForm: React.FC<AddNoteFormProps> = ({
             </button>
           </div>
 
-          {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -257,9 +288,7 @@ const AddNoteForm: React.FC<AddNoteFormProps> = ({
                   disabled={isSubmitting}
                 >
                   <p className="font-semibold text-gray-900">{text.lostItem}</p>
-                  <p className="text-xs text-gray-600 mt-1">
-                    {text.lostItemHint}
-                  </p>
+                  <p className="text-xs text-gray-600 mt-1">{text.lostItemHint}</p>
                 </button>
                 <button
                   type="button"
@@ -272,30 +301,30 @@ const AddNoteForm: React.FC<AddNoteFormProps> = ({
                   disabled={isSubmitting}
                 >
                   <p className="font-semibold text-gray-900">{text.foundItem}</p>
-                  <p className="text-xs text-gray-600 mt-1">
-                    {text.foundItemHint}
-                  </p>
+                  <p className="text-xs text-gray-600 mt-1">{text.foundItemHint}</p>
                 </button>
               </div>
             </div>
 
-            {/* Title */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                {text.formTitle}
+                {text.formTitle} <span className="text-red-600">*</span>
               </label>
               <input
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
+                onBlur={() => setTouched((prev) => ({ ...prev, title: true }))}
                 className="form-input"
                 placeholder={text.formTitlePlaceholder}
                 required
                 disabled={isSubmitting}
               />
+              {touched.title && !title.trim() && (
+                <p className="mt-1 text-xs text-red-600">{text.requiredHint}</p>
+              )}
             </div>
 
-            {/* Description */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 {text.description}
@@ -310,40 +339,62 @@ const AddNoteForm: React.FC<AddNoteFormProps> = ({
               />
             </div>
 
-            {/* Location */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                {status === 'lost' ? text.lostLocation : text.foundLocation}
+                {status === 'lost' ? text.lostLocation : text.foundLocation} <span className="text-red-600">*</span>
               </label>
               <input
                 type="text"
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
+                onBlur={() => setTouched((prev) => ({ ...prev, location: true }))}
                 className="form-input"
                 placeholder={text.locationPlaceholder}
                 required
                 disabled={isSubmitting}
               />
+              {touched.location && !location.trim() && (
+                <p className="mt-1 text-xs text-red-600">{text.requiredHint}</p>
+              )}
             </div>
 
-            {/* Date */}
+            {status === 'lost' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  {text.bonusPrice}
+                </label>
+                <input
+                  type="text"
+                  value={bonusPrice}
+                  onChange={(e) => setBonusPrice(e.target.value)}
+                  className="form-input"
+                  placeholder={text.bonusPricePlaceholder}
+                  disabled={isSubmitting}
+                />
+              </div>
+            )}
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                {text.date}
+                {text.date} <span className="text-red-600">*</span>
               </label>
               <input
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
+                onBlur={() => setTouched((prev) => ({ ...prev, date: true }))}
                 className="form-input"
+                required
                 disabled={isSubmitting}
               />
+              {touched.date && !date && (
+                <p className="mt-1 text-xs text-red-600">{text.requiredHint}</p>
+              )}
             </div>
 
-            {/* Contact */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                {status === 'lost' ? text.contact : text.contactOwner}
+                {status === 'lost' ? text.contact : text.contactOwner} <span className="text-red-600">*</span>
               </label>
               <div className="mb-2">
                 <button
@@ -363,14 +414,71 @@ const AddNoteForm: React.FC<AddNoteFormProps> = ({
                 type="text"
                 value={isAnonymous ? text.anonymous : contact}
                 onChange={(e) => setContact(e.target.value)}
+                onBlur={() => setTouched((prev) => ({ ...prev, contact: true }))}
                 className="form-input"
                 placeholder={text.contactPlaceholder}
                 required={!isAnonymous}
                 disabled={isSubmitting || isAnonymous}
               />
+              {touched.contact && !isAnonymous && !contact.trim() && (
+                <p className="mt-1 text-xs text-red-600">{text.requiredHint}</p>
+              )}
             </div>
 
-            {/* Color Selection */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                {text.uploadImage}
+              </label>
+              <div className="border border-gray-300 rounded-lg p-3">
+                <label className="inline-flex items-center gap-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-md cursor-pointer transition-colors">
+                  <Upload className="w-4 h-4" />
+                  <span className="text-sm">{text.chooseFromDevice}</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageFileChange}
+                    className="hidden"
+                    disabled={isSubmitting}
+                  />
+                </label>
+                <p className="mt-2 text-xs text-gray-500">{text.uploadHint}</p>
+
+                {imageUrl && (
+                  <div className="mt-3">
+                    <div className="relative rounded-lg overflow-hidden border border-gray-200">
+                      <img
+                        src={imageUrl}
+                        alt="Preview"
+                        className="w-full h-40 object-cover"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setImageUrl('')}
+                        className="absolute top-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded"
+                        disabled={isSubmitting}
+                      >
+                        {text.remove}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {!imageUrl && (
+                  <div className="mt-3 relative">
+                    <input
+                      type="url"
+                      value={imageUrl}
+                      onChange={(e) => setImageUrl(e.target.value)}
+                      className="form-input pr-10"
+                      placeholder={text.imageUrlPlaceholder}
+                      disabled={isSubmitting}
+                    />
+                    <ImageIcon className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  </div>
+                )}
+              </div>
+            </div>
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 {text.noteColor}
@@ -380,9 +488,7 @@ const AddNoteForm: React.FC<AddNoteFormProps> = ({
                   <button
                     key={option.value}
                     type="button"
-                    onClick={() => {
-                      setColor(option.value);
-                    }}
+                    onClick={() => setColor(option.value)}
                     className={`w-12 h-12 rounded-full border-2 transition-transform hover:scale-110 ${
                       color === option.value ? 'border-gray-900 scale-110' : 'border-transparent'
                     }`}
@@ -434,64 +540,6 @@ const AddNoteForm: React.FC<AddNoteFormProps> = ({
               )}
             </div>
 
-            {/* Image */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                {text.uploadImage}
-              </label>
-              <div className="border border-gray-300 rounded-lg p-3">
-                <label className="inline-flex items-center gap-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-md cursor-pointer transition-colors">
-                  <Upload className="w-4 h-4" />
-                  <span className="text-sm">{text.chooseFromDevice}</span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageFileChange}
-                    className="hidden"
-                    disabled={isSubmitting}
-                  />
-                </label>
-                <p className="mt-2 text-xs text-gray-500">
-                  {text.uploadHint}
-                </p>
-
-                {imageUrl && (
-                  <div className="mt-3">
-                    <div className="relative rounded-lg overflow-hidden border border-gray-200">
-                      <img
-                        src={imageUrl}
-                        alt="Preview"
-                        className="w-full h-40 object-cover"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setImageUrl('')}
-                        className="absolute top-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded"
-                        disabled={isSubmitting}
-                      >
-                        {text.remove}
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {!imageUrl && (
-                  <div className="mt-3 relative">
-                    <input
-                      type="url"
-                      value={imageUrl}
-                      onChange={(e) => setImageUrl(e.target.value)}
-                      className="form-input pr-10"
-                      placeholder={text.imageUrlPlaceholder}
-                      disabled={isSubmitting}
-                    />
-                    <ImageIcon className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Honeypot (anti-bot) */}
             <div className="hidden" aria-hidden="true">
               <label htmlFor="website">{text.website}</label>
               <input
@@ -504,14 +552,9 @@ const AddNoteForm: React.FC<AddNoteFormProps> = ({
               />
             </div>
 
-            {submitError && (
-              <p className="text-sm text-red-600">{submitError}</p>
-            )}
-            {imageError && (
-              <p className="text-sm text-red-600">{imageError}</p>
-            )}
+            {submitError && <p className="text-sm text-red-600">{submitError}</p>}
+            {imageError && <p className="text-sm text-red-600">{imageError}</p>}
 
-            {/* Submit Button */}
             <div className="flex gap-3 pt-4">
               <button
                 type="button"
@@ -524,7 +567,14 @@ const AddNoteForm: React.FC<AddNoteFormProps> = ({
               <button
                 type="submit"
                 className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-60"
-                disabled={isSubmitting || !title.trim() || !location.trim() || (!isAnonymous && !contact.trim()) || honeypot.trim().length > 0}
+                disabled={
+                  isSubmitting ||
+                  !title.trim() ||
+                  !location.trim() ||
+                  !date ||
+                  (!isAnonymous && !contact.trim()) ||
+                  honeypot.trim().length > 0
+                }
               >
                 {isSubmitting ? text.submitting : status === 'lost' ? text.addLost : text.addFound}
               </button>

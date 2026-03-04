@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { MapPin, Calendar, Phone, Tag } from 'lucide-react';
+import { MapPin, Calendar, Tag, Gift } from 'lucide-react';
 import { LostFoundItem } from '../types';
 
 type Language = 'en' | 'cn';
@@ -9,6 +9,7 @@ interface StickyNoteProps {
   item: LostFoundItem;
   onClick: () => void;
   language: Language;
+  searchQuery?: string;
 }
 
 const colorClasses: Record<string, string> = {
@@ -23,26 +24,79 @@ const HEX_COLOR_PATTERN = /^#[0-9a-fA-F]{6}$/;
 
 const rotation = ['-2deg', '1deg', '-1deg', '2deg', '-3deg', '3deg'];
 
-const StickyNote: React.FC<StickyNoteProps> = ({ item, onClick, language }) => {
+const escapeRegExp = (value: string): string =>
+  value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+const getCustomHighlightStyle = (hexColor: string): React.CSSProperties => {
+  const r = Number.parseInt(hexColor.slice(1, 3), 16);
+  const g = Number.parseInt(hexColor.slice(3, 5), 16);
+  const b = Number.parseInt(hexColor.slice(5, 7), 16);
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+
+  if (luminance > 0.75) {
+    return { backgroundColor: 'rgba(251, 191, 36, 0.7)', color: '#111827' };
+  }
+  if (luminance > 0.5) {
+    return { backgroundColor: 'rgba(255, 255, 255, 0.65)', color: '#111827' };
+  }
+  return { backgroundColor: 'rgba(255, 255, 255, 0.45)', color: '#111827' };
+};
+
+const StickyNote: React.FC<StickyNoteProps> = ({ item, onClick, language, searchQuery = '' }) => {
   const randomRotation = rotation[Math.floor(Math.random() * rotation.length)];
   const presetColorClass = colorClasses[item.color] || '';
   const customColorStyle = HEX_COLOR_PATTERN.test(item.color) ? { backgroundColor: item.color } : undefined;
+  const presetHighlightClass: Record<string, string> = {
+    yellow: 'bg-amber-300/70 text-gray-900',
+    pink: 'bg-fuchsia-200/80 text-gray-900',
+    blue: 'bg-blue-200/80 text-gray-900',
+    green: 'bg-emerald-200/80 text-gray-900',
+    orange: 'bg-orange-300/75 text-gray-900',
+    purple: 'bg-violet-200/80 text-gray-900',
+  };
+  const highlightClassName = `rounded px-1 py-0.5 ${presetHighlightClass[item.color] || 'bg-amber-300/70 text-gray-900'}`;
+  const customHighlightStyle = HEX_COLOR_PATTERN.test(item.color) ? getCustomHighlightStyle(item.color) : undefined;
+  const queryTokens = searchQuery
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+  const highlightRegex = queryTokens.length > 0
+    ? new RegExp(`(${queryTokens.map((token) => escapeRegExp(token)).join('|')})`, 'ig')
+    : null;
+
+  const renderHighlighted = (value: string): React.ReactNode => {
+    if (!highlightRegex || !value) return value;
+    const parts = value.split(highlightRegex);
+    return parts.map((part, index) => {
+      if (!part) return null;
+      if (queryTokens.some((token) => token.toLowerCase() === part.toLowerCase())) {
+        return (
+          <mark
+            key={`${part}-${index}`}
+            className={highlightClassName}
+            style={customHighlightStyle}
+          >
+            {part}
+          </mark>
+        );
+      }
+      return <React.Fragment key={`${part}-${index}`}>{part}</React.Fragment>;
+    });
+  };
+
   const text = language === 'cn'
     ? {
       claimed: '\u5df2\u8ba4\u9886',
       lost: '\u5931\u7269',
       found: '\u62db\u9886',
-      anonymous: '\u533f\u540d',
+      reward: '\u8d4f\u91d1',
     }
     : {
       claimed: 'Claimed',
       lost: 'Lost',
       found: 'Found',
-      anonymous: 'Anonymous',
+      reward: 'Reward',
     };
-  const contactDisplay = item.contact.trim().toLowerCase() === 'anonymous'
-    ? text.anonymous
-    : item.contact;
 
   return (
     <motion.div
@@ -71,7 +125,7 @@ const StickyNote: React.FC<StickyNoteProps> = ({ item, onClick, language }) => {
 
       <div className="flex items-start justify-between mb-3">
         <h3 className="text-lg font-bold text-gray-900 line-clamp-2 flex-1 pr-2">
-          {item.title}
+          {renderHighlighted(item.title)}
         </h3>
         <span
           className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-[11px] font-semibold flex-shrink-0 ${
@@ -86,22 +140,26 @@ const StickyNote: React.FC<StickyNoteProps> = ({ item, onClick, language }) => {
       </div>
 
       <p className="text-sm text-gray-700 mb-4 line-clamp-3">
-        {item.description}
+        {renderHighlighted(item.description)}
       </p>
 
       <div className="space-y-2 text-xs text-gray-600">
         <div className="flex items-center gap-2">
           <MapPin className="w-3.5 h-3.5" />
-          <span className="truncate">{item.location}</span>
+          <span className="truncate">{renderHighlighted(item.location)}</span>
         </div>
         <div className="flex items-center gap-2">
           <Calendar className="w-3.5 h-3.5" />
           <span>{new Date(item.date).toLocaleDateString()}</span>
         </div>
-        <div className="flex items-center gap-2">
-          <Phone className="w-3.5 h-3.5" />
-          <span className="truncate">{contactDisplay}</span>
-        </div>
+        {item.bonusPrice && (
+          <div className="flex items-center gap-2">
+            <Gift className="w-3.5 h-3.5" />
+            <span className="truncate">
+              {text.reward}: {renderHighlighted(item.bonusPrice)}
+            </span>
+          </div>
+        )}
       </div>
 
       {item.imageUrl && (

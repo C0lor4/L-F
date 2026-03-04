@@ -45,7 +45,9 @@ const StickyBoard: React.FC<StickyBoardProps> = ({
           return (
             item.title.toLowerCase().includes(searchLower) ||
             item.description.toLowerCase().includes(searchLower) ||
-            item.location.toLowerCase().includes(searchLower)
+            item.location.toLowerCase().includes(searchLower) ||
+            item.contact.toLowerCase().includes(searchLower) ||
+            (item.bonusPrice || '').toLowerCase().includes(searchLower)
           );
         }
         return true;
@@ -93,7 +95,12 @@ const StickyBoard: React.FC<StickyBoardProps> = ({
                 transition={{ duration: 0.3 }}
                 className="masonry-item"
               >
-                <StickyNote item={item} onClick={() => onNoteClick(item)} language={language} />
+                <StickyNote
+                  item={item}
+                  onClick={() => onNoteClick(item)}
+                  language={language}
+                  searchQuery={filter.search}
+                />
               </motion.div>
             ))}
           </AnimatePresence>

@@ -12,6 +12,7 @@ interface LostFoundItem {
   location: string;
   date: string;
   contact: string;
+  bonusPrice?: string;
   status: ItemStatus;
   color: StickyColor;
   imageUrl?: string;
@@ -26,6 +27,7 @@ interface ItemRow {
   location: string;
   date: string;
   contact: string;
+  bonus_price?: string | null;
   status: ItemStatus;
   color: StickyColor;
   image_url: string | null;
@@ -38,6 +40,7 @@ const MAX_LENGTHS = {
   description: 1500,
   location: 180,
   contact: 180,
+  bonusPrice: 120,
   imageUrl: 2_100_000,
 };
 
@@ -62,6 +65,7 @@ const toItem = (row: ItemRow): LostFoundItem => ({
   location: row.location,
   date: row.date,
   contact: row.contact,
+  bonusPrice: row.bonus_price || undefined,
   status: row.status,
   color: row.color,
   imageUrl: row.image_url || undefined,
@@ -80,6 +84,7 @@ const validatePayload = (input: unknown): { ok: true; value: Omit<LostFoundItem,
   const location = normalizeText(body.location);
   const date = normalizeText(body.date);
   const contact = normalizeText(body.contact);
+  const bonusPrice = normalizeText(body.bonusPrice);
   const status = normalizeText(body.status) as ItemStatus;
   const inputColor = normalizeText(body.color);
   const imageUrl = normalizeText(body.imageUrl);
@@ -95,7 +100,13 @@ const validatePayload = (input: unknown): { ok: true; value: Omit<LostFoundItem,
     return { ok: false, error: 'Required fields are missing.' };
   }
 
-  if (title.length > MAX_LENGTHS.title || description.length > MAX_LENGTHS.description || location.length > MAX_LENGTHS.location || contact.length > MAX_LENGTHS.contact) {
+  if (
+    title.length > MAX_LENGTHS.title ||
+    description.length > MAX_LENGTHS.description ||
+    location.length > MAX_LENGTHS.location ||
+    contact.length > MAX_LENGTHS.contact ||
+    bonusPrice.length > MAX_LENGTHS.bonusPrice
+  ) {
     return { ok: false, error: 'One or more fields are too long.' };
   }
 
@@ -134,7 +145,7 @@ const validatePayload = (input: unknown): { ok: true; value: Omit<LostFoundItem,
     }
   }
 
-  const scanText = `${title} ${description} ${location} ${contact}`.toLowerCase();
+  const scanText = `${title} ${description} ${location} ${contact} ${bonusPrice}`.toLowerCase();
   if (BANNED_KEYWORDS.some((keyword) => scanText.includes(keyword))) {
     return { ok: false, error: 'Submission rejected by anti-abuse filter.' };
   }
@@ -147,6 +158,7 @@ const validatePayload = (input: unknown): { ok: true; value: Omit<LostFoundItem,
       location,
       date,
       contact,
+      bonusPrice: status === 'lost' ? (bonusPrice || undefined) : undefined,
       status,
       color,
       imageUrl: imageUrl || undefined,
@@ -204,10 +216,10 @@ export const onRequestGet: PagesFunction<Env> = async ({ env }) => {
     return json({ error: 'Database binding "DB" is missing.' }, 500);
   }
 
-  const runQuery = (selectColorExpr: string, withClaims: boolean) =>
+  const runQuery = (selectColorExpr: string, selectBonusExpr: string, withClaims: boolean) =>
     env.DB
       .prepare(`
-        SELECT items.id, items.title, items.description, items.location, items.date, items.contact, items.status, ${selectColorExpr} AS color, items.image_url, items.created_at${
+        SELECT items.id, items.title, items.description, items.location, items.date, items.contact, ${selectBonusExpr} AS bonus_price, items.status, ${selectColorExpr} AS color, items.image_url, items.created_at${
           withClaims ? ', item_claims.created_at AS claim_created_at' : ''
         }
         FROM items
@@ -219,35 +231,38 @@ export const onRequestGet: PagesFunction<Env> = async ({ env }) => {
       .all<ItemRow>();
 
   try {
-    const rows = await runQuery('COALESCE(items.custom_color, items.color)', true);
-    const items = (rows.results || []).map(toItem);
-    return json({ items });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    if (message.includes('no such column: custom_color')) {
-      const fallbackRows = await runQuery('items.color', true);
-      const fallbackItems = (fallbackRows.results || []).map(toItem);
-      return json({ items: fallbackItems });
-    }
-    if (
-      message.includes('no such table: item_claims') ||
-      message.includes('no such column: item_claims.created_at')
-    ) {
+    const attempts = [
+      { color: 'COALESCE(items.custom_color, items.color)', bonus: 'items.bonus_price', claims: true },
+      { color: 'items.color', bonus: 'items.bonus_price', claims: true },
+      { color: 'COALESCE(items.custom_color, items.color)', bonus: 'NULL', claims: true },
+      { color: 'items.color', bonus: 'NULL', claims: true },
+      { color: 'COALESCE(items.custom_color, items.color)', bonus: 'items.bonus_price', claims: false },
+      { color: 'items.color', bonus: 'items.bonus_price', claims: false },
+      { color: 'COALESCE(items.custom_color, items.color)', bonus: 'NULL', claims: false },
+      { color: 'items.color', bonus: 'NULL', claims: false },
+    ] as const;
+
+    for (const attempt of attempts) {
       try {
-        const noClaimsRows = await runQuery('COALESCE(items.custom_color, items.color)', false);
-        const noClaimsItems = (noClaimsRows.results || []).map(toItem);
-        return json({ items: noClaimsItems });
-      } catch (innerError) {
-        const innerMessage = innerError instanceof Error ? innerError.message : String(innerError);
-        if (innerMessage.includes('no such column: custom_color')) {
-          const legacyRows = await runQuery('items.color', false);
-          const legacyItems = (legacyRows.results || []).map(toItem);
-          return json({ items: legacyItems });
+        const rows = await runQuery(attempt.color, attempt.bonus, attempt.claims);
+        const items = (rows.results || []).map(toItem);
+        return json({ items });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        const isCompatError =
+          message.includes('no such column: custom_color') ||
+          message.includes('no such column: items.custom_color') ||
+          message.includes('no such column: bonus_price') ||
+          message.includes('no such column: items.bonus_price') ||
+          message.includes('no such table: item_claims') ||
+          message.includes('no such column: item_claims.created_at');
+        if (!isCompatError) {
+          throw error;
         }
-        console.error('Failed to load items:', innerError);
-        return json({ error: 'Failed to load items.' }, 500);
       }
     }
+    throw new Error('Failed to load items due to incompatible schema.');
+  } catch (error) {
     console.error('Failed to load items:', error);
     return json({ error: 'Failed to load items.' }, 500);
   }
@@ -283,6 +298,28 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     const insertWithCustomColor = () =>
       env.DB
         .prepare(`
+          INSERT INTO items (title, description, location, date, contact, bonus_price, status, color, custom_color, image_url, created_at, moderation_status)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `)
+        .bind(
+          item.title,
+          item.description,
+          item.location,
+          item.date,
+          item.contact,
+          item.bonusPrice || null,
+          item.status,
+          isCustomColor ? 'yellow' : item.color,
+          isCustomColor ? item.color : null,
+          item.imageUrl || null,
+          createdAt,
+          'pending'
+        )
+        .run();
+
+    const insertWithCustomColorNoBonus = () =>
+      env.DB
+        .prepare(`
           INSERT INTO items (title, description, location, date, contact, status, color, custom_color, image_url, created_at, moderation_status)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `)
@@ -295,6 +332,27 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
           item.status,
           isCustomColor ? 'yellow' : item.color,
           isCustomColor ? item.color : null,
+          item.imageUrl || null,
+          createdAt,
+          'pending'
+        )
+        .run();
+
+    const insertNoCustomColor = () =>
+      env.DB
+        .prepare(`
+          INSERT INTO items (title, description, location, date, contact, bonus_price, status, color, image_url, created_at, moderation_status)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `)
+        .bind(
+          item.title,
+          item.description,
+          item.location,
+          item.date,
+          item.contact,
+          item.bonusPrice || null,
+          item.status,
+          item.color,
           item.imageUrl || null,
           createdAt,
           'pending'
@@ -326,13 +384,22 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
       insert = await insertWithCustomColor();
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      if (!message.includes('no such column: custom_color')) {
-        throw error;
-      }
-      if (isCustomColor) {
+      const missingCustom = message.includes('no such column: custom_color');
+      const missingBonus = message.includes('no such column: bonus_price');
+
+      if (missingCustom && isCustomColor) {
         return json({ error: 'Custom colors require a database migration.' }, 400);
       }
-      insert = await insertLegacy();
+
+      if (missingCustom && missingBonus) {
+        insert = await insertLegacy();
+      } else if (missingCustom) {
+        insert = await insertNoCustomColor();
+      } else if (missingBonus) {
+        insert = await insertWithCustomColorNoBonus();
+      } else {
+        throw error;
+      }
     }
 
     const id = Number(insert.meta.last_row_id || 0);
@@ -344,7 +411,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     try {
       row = await env.DB
         .prepare(`
-          SELECT id, title, description, location, date, contact, status, COALESCE(custom_color, color) AS color, image_url, created_at
+          SELECT id, title, description, location, date, contact, bonus_price, status, COALESCE(custom_color, color) AS color, image_url, created_at
           FROM items
           WHERE id = ?
         `)
@@ -352,17 +419,34 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
         .first<ItemRow>();
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      if (!message.includes('no such column: custom_color')) {
+      if (!message.includes('no such column: custom_color') && !message.includes('no such column: bonus_price')) {
         throw error;
       }
-      row = await env.DB
-        .prepare(`
-          SELECT id, title, description, location, date, contact, status, color, image_url, created_at
+      const fallbackQueries = [
+        `
+          SELECT id, title, description, location, date, contact, bonus_price, status, color, image_url, created_at
           FROM items
           WHERE id = ?
-        `)
-        .bind(id)
-        .first<ItemRow>();
+        `,
+        `
+          SELECT id, title, description, location, date, contact, NULL AS bonus_price, status, COALESCE(custom_color, color) AS color, image_url, created_at
+          FROM items
+          WHERE id = ?
+        `,
+        `
+          SELECT id, title, description, location, date, contact, NULL AS bonus_price, status, color, image_url, created_at
+          FROM items
+          WHERE id = ?
+        `,
+      ] as const;
+      for (const query of fallbackQueries) {
+        try {
+          row = await env.DB.prepare(query).bind(id).first<ItemRow>();
+          if (row) break;
+        } catch {
+          continue;
+        }
+      }
     }
 
     if (!row) {

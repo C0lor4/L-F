@@ -9,6 +9,7 @@ export interface LostFoundItem {
   location: string;
   date: string;
   contact: string;
+  bonusPrice?: string;
   status: ItemStatus;
   color: StickyColor;
   imageUrl?: string;

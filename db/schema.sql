@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS items (
   location TEXT NOT NULL,
   date TEXT NOT NULL,
   contact TEXT NOT NULL,
+  bonus_price TEXT,
   status TEXT NOT NULL CHECK (status IN ('lost', 'found')),
   color TEXT NOT NULL CHECK (color IN ('yellow', 'pink', 'blue', 'green', 'orange', 'purple')),
   custom_color TEXT,

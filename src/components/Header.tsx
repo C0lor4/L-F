@@ -22,7 +22,11 @@ const Header: React.FC<HeaderProps> = ({
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const desktopSearchWrapRef = useRef<HTMLDivElement | null>(null);
+  const mobileSearchPanelRef = useRef<HTMLDivElement | null>(null);
+  const mobileSearchTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const desktopSearchInputRef = useRef<HTMLInputElement | null>(null);
+  const mobileSearchInputRef = useRef<HTMLInputElement | null>(null);
 
   const text = language === 'cn'
     ? {
@@ -42,8 +46,35 @@ const Header: React.FC<HeaderProps> = ({
 
   useEffect(() => {
     if (isSearchOpen) {
-      searchInputRef.current?.focus();
+      requestAnimationFrame(() => {
+        const desktopInput = desktopSearchInputRef.current;
+        const mobileInput = mobileSearchInputRef.current;
+        if (desktopInput && desktopInput.offsetParent !== null) {
+          desktopInput.focus();
+          return;
+        }
+        if (mobileInput && mobileInput.offsetParent !== null) {
+          mobileInput.focus();
+        }
+      });
     }
+  }, [isSearchOpen]);
+
+  useEffect(() => {
+    if (!isSearchOpen) return;
+    const handleDocumentPointerDown = (event: MouseEvent) => {
+      const target = event.target as Node;
+      const inDesktop = desktopSearchWrapRef.current?.contains(target);
+      const inMobilePanel = mobileSearchPanelRef.current?.contains(target);
+      const inMobileTrigger = mobileSearchTriggerRef.current?.contains(target);
+      if (!inDesktop && !inMobilePanel && !inMobileTrigger) {
+        setIsSearchOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleDocumentPointerDown);
+    return () => {
+      document.removeEventListener('mousedown', handleDocumentPointerDown);
+    };
   }, [isSearchOpen]);
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -99,31 +130,21 @@ const Header: React.FC<HeaderProps> = ({
 
           <div className="hidden md:flex items-center gap-2 ml-auto">
             <div
-              className={`relative h-10 flex items-center rounded-full border border-gray-300 bg-white overflow-hidden transition-all duration-300 ${
-                isSearchOpen ? 'w-72 px-3' : 'w-10 justify-center'
+              ref={desktopSearchWrapRef}
+              className={`relative h-10 rounded-full border border-gray-300 bg-white overflow-hidden transition-[width] duration-300 ${
+                isSearchOpen ? 'w-72' : 'w-10'
               }`}
             >
-              {isSearchOpen ? (
-                <button
-                  type="button"
-                  onClick={toggleSearch}
-                  className="w-5 h-5 shrink-0 p-0 leading-none text-gray-500 hover:text-gray-700 flex items-center justify-center"
-                  aria-label="Toggle search"
-                >
-                  <Search className="block w-5 h-5" />
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={toggleSearch}
-                  className="absolute inset-0 m-auto w-10 h-10 p-0 leading-none text-gray-500 hover:text-gray-700 flex items-center justify-center"
-                  aria-label="Toggle search"
-                >
-                  <Search className="block w-5 h-5" />
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={toggleSearch}
+                className="absolute left-2 top-1/2 -translate-y-1/2 w-6 h-6 p-0 leading-none text-gray-500 hover:text-gray-700 flex items-center justify-center"
+                aria-label="Toggle search"
+              >
+                <Search className="block w-5 h-5" />
+              </button>
               <input
-                ref={searchInputRef}
+                ref={desktopSearchInputRef}
                 type="text"
                 value={searchQuery}
                 onChange={handleSearch}
@@ -133,13 +154,8 @@ const Header: React.FC<HeaderProps> = ({
                     setIsSearchOpen(false);
                   }
                 }}
-                onBlur={() => {
-                  setTimeout(() => {
-                    setIsSearchOpen(false);
-                  }, 120);
-                }}
-                className={`ml-2 bg-transparent text-sm outline-none transition-all duration-300 ${
-                  isSearchOpen ? 'w-full opacity-100' : 'w-0 opacity-0 pointer-events-none'
+                className={`h-full w-full bg-transparent pl-10 pr-3 text-sm outline-none transition-opacity duration-200 ${
+                  isSearchOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
                 }`}
               />
             </div>
@@ -155,6 +171,7 @@ const Header: React.FC<HeaderProps> = ({
 
           <div className="md:hidden ml-auto flex items-center gap-2">
             <button
+              ref={mobileSearchTriggerRef}
               type="button"
               onClick={toggleSearch}
               className="w-10 h-10 p-0 leading-none border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 flex items-center justify-center"
@@ -173,19 +190,19 @@ const Header: React.FC<HeaderProps> = ({
         </div>
 
         {isSearchOpen && (
-          <div className="md:hidden mt-3">
+          <div ref={mobileSearchPanelRef} className="md:hidden mt-3">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input
-                ref={searchInputRef}
+                ref={mobileSearchInputRef}
                 type="text"
                 value={searchQuery}
                 onChange={handleSearch}
                 placeholder={text.search}
-                onBlur={() => {
-                  setTimeout(() => {
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape') {
                     setIsSearchOpen(false);
-                  }, 120);
+                  }
                 }}
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
@@ -199,7 +216,7 @@ const Header: React.FC<HeaderProps> = ({
               <button
                 type="button"
                 onClick={onLanguageToggle}
-                className="text-left px-4 py-2 rounded-lg transition-colors text-gray-700 hover:bg-gray-50 border border-gray-200"
+                className="self-start w-auto px-4 py-2 rounded-lg transition-colors text-gray-700 hover:bg-gray-50 border border-gray-200"
               >
                 {language === 'en' ? 'EN' : 'CN'}
               </button>
