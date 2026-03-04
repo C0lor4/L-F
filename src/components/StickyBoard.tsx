@@ -62,6 +62,17 @@ const StickyBoard: React.FC<StickyBoardProps> = ({
           const delta = a.title.localeCompare(b.title);
           return filter.sortOrder === 'asc' ? delta : -delta;
         }
+
+        if (filter.sortBy === 'bonus') {
+          const aHasBonus = Boolean(a.bonusPrice?.trim());
+          const bHasBonus = Boolean(b.bonusPrice?.trim());
+          if (aHasBonus !== bHasBonus) {
+            return aHasBonus ? -1 : 1;
+          }
+
+          const delta = new Date(a.date).getTime() - new Date(b.date).getTime();
+          return filter.sortOrder === 'asc' ? delta : -delta;
+        }
         return 0;
       });
   }, [items, filter]);

@@ -114,6 +114,7 @@ const Home: React.FC = () => {
       label: '\u6392\u5e8f',
       time: '\u65f6\u95f4',
       name: '\u540d\u79f0',
+      bonus: '\u8d4f\u91d1\u4f18\u5148',
       ascending: '\u5347\u5e8f',
       descending: '\u964d\u5e8f',
       showClaimed: '\u663e\u793a\u5df2\u8ba4\u9886',
@@ -122,6 +123,7 @@ const Home: React.FC = () => {
       label: 'Sort by',
       time: 'Time',
       name: 'Name',
+      bonus: 'Bonus first',
       ascending: 'Ascending',
       descending: 'Descending',
       showClaimed: 'Show Claimed',
@@ -184,6 +186,7 @@ const Home: React.FC = () => {
             >
               <option value="date">{sortText.time}</option>
               <option value="title">{sortText.name}</option>
+              <option value="bonus">{sortText.bonus}</option>
             </select>
             <button
               type="button"
