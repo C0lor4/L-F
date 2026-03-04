@@ -82,17 +82,68 @@ const toCommitTitle = (title: string, itemId: number): string => {
   return trimmed || `item ${itemId}`;
 };
 
+const hasMissingColumnError = (message: string, column: string): boolean => {
+  const normalized = message.toLowerCase();
+  return (
+    normalized.includes(`no such column: ${column}`) ||
+    normalized.includes(`no such column: items.${column}`) ||
+    normalized.includes(`has no column named ${column}`) ||
+    normalized.includes(`table items has no column named ${column}`)
+  );
+};
+
+type DeletableItemSnapshot = {
+  id: number;
+  title: string;
+  description: string | null;
+  location: string | null;
+  date: string | null;
+  contact: string | null;
+  bonus_price: string | null;
+  status: 'lost' | 'found';
+  color: string | null;
+  custom_color: string | null;
+  image_url: string | null;
+  created_at: string | null;
+  moderation_status: ModerationStatus | null;
+  claim_id: number | null;
+  claim_item_id: number | null;
+  claimer_name: string | null;
+  claim_location: string | null;
+  claim_date: string | null;
+  claim_created_at: string | null;
+};
+
 const backupDeletedClaimToGitHub = async (
   env: Env,
   data: {
     itemId: number;
     itemTitle: string;
-    itemStatus: 'lost' | 'found';
-    itemContact: string;
-    itemLocation: string;
-    claimDate: string | null;
-    claimerNickname: string | null;
-    claimRecordedAt: string;
+    snapshot: {
+      item: {
+        id: number;
+        title: string;
+        description: string | null;
+        location: string | null;
+        date: string | null;
+        contact: string | null;
+        bonus_price: string | null;
+        status: 'lost' | 'found';
+        color: string | null;
+        custom_color: string | null;
+        image_url: string | null;
+        created_at: string | null;
+        moderation_status: ModerationStatus | null;
+      };
+      claim: {
+        id: number | null;
+        item_id: number | null;
+        claimer_name: string | null;
+        claim_location: string | null;
+        claim_date: string | null;
+        created_at: string | null;
+      };
+    };
     deletedAt: string;
   }
 ): Promise<void> => {
@@ -114,7 +165,10 @@ const backupDeletedClaimToGitHub = async (
   const content = JSON.stringify(
     {
       event: 'deleted_claimed_item',
-      ...data,
+      itemId: data.itemId,
+      itemTitle: data.itemTitle,
+      deletedAt: data.deletedAt,
+      snapshot: data.snapshot,
     },
     null,
     2
@@ -256,41 +310,82 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   }
 
   if (action === 'delete') {
-    type DeletableItemRow = {
-      id: number;
-      title: string;
-      status: 'lost' | 'found';
-      contact: string;
-      location: string;
-      claim_date: string | null;
-      claimer_name: string | null;
-      claim_created_at: string | null;
-    };
-
-    let target: DeletableItemRow | null = null;
+    let target: DeletableItemSnapshot | null = null;
     try {
       target = await env.DB
         .prepare(`
-          SELECT items.id, items.title, items.status, items.contact, items.location,
-                 item_claims.claim_date, item_claims.claimer_name, item_claims.created_at AS claim_created_at
+          SELECT
+            items.id,
+            items.title,
+            items.description,
+            items.location,
+            items.date,
+            items.contact,
+            items.bonus_price,
+            items.status,
+            items.color,
+            items.custom_color,
+            items.image_url,
+            items.created_at,
+            items.moderation_status,
+            item_claims.id AS claim_id,
+            item_claims.item_id AS claim_item_id,
+            item_claims.claimer_name,
+            item_claims.claim_location,
+            item_claims.claim_date,
+            item_claims.created_at AS claim_created_at
           FROM items
           LEFT JOIN item_claims ON item_claims.item_id = items.id
           WHERE items.id = ?
           LIMIT 1
         `)
         .bind(id)
-        .first<DeletableItemRow>();
+        .first<DeletableItemSnapshot>();
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      if (!message.includes('no such table: item_claims')) {
+      const missingBonus = hasMissingColumnError(message, 'bonus_price');
+      const missingCustom = hasMissingColumnError(message, 'custom_color');
+      if (!missingBonus && !missingCustom && !message.includes('no such table: item_claims')) {
         throw error;
+      }
+
+      if (!message.includes('no such table: item_claims')) {
+        target = await env.DB
+          .prepare(`
+            SELECT
+              items.id,
+              items.title,
+              items.description,
+              items.location,
+              items.date,
+              items.contact,
+              ${missingBonus ? 'NULL' : 'items.bonus_price'} AS bonus_price,
+              items.status,
+              items.color,
+              ${missingCustom ? 'NULL' : 'items.custom_color'} AS custom_color,
+              items.image_url,
+              items.created_at,
+              items.moderation_status,
+              item_claims.id AS claim_id,
+              item_claims.item_id AS claim_item_id,
+              item_claims.claimer_name,
+              item_claims.claim_location,
+              item_claims.claim_date,
+              item_claims.created_at AS claim_created_at
+            FROM items
+            LEFT JOIN item_claims ON item_claims.item_id = items.id
+            WHERE items.id = ?
+            LIMIT 1
+          `)
+          .bind(id)
+          .first<DeletableItemSnapshot>();
       }
     }
 
     if (!target) {
       const fallback = await env.DB
         .prepare(`
-          SELECT id, title, status, contact, location
+          SELECT id, title, description, location, date, contact, status, color, image_url, created_at, moderation_status
           FROM items
           WHERE id = ?
           LIMIT 1
@@ -299,9 +394,15 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
         .first<{
           id: number;
           title: string;
+          description: string | null;
+          location: string | null;
+          date: string | null;
+          contact: string | null;
           status: 'lost' | 'found';
-          contact: string;
-          location: string;
+          color: string | null;
+          image_url: string | null;
+          created_at: string | null;
+          moderation_status: ModerationStatus | null;
         }>();
 
       if (!fallback) {
@@ -310,8 +411,13 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
 
       target = {
         ...fallback,
-        claim_date: null,
+        bonus_price: null,
+        custom_color: null,
+        claim_id: null,
+        claim_item_id: null,
         claimer_name: null,
+        claim_location: null,
+        claim_date: null,
         claim_created_at: null,
       };
     }
@@ -322,12 +428,31 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
         await backupDeletedClaimToGitHub(env, {
           itemId: target.id,
           itemTitle: target.title,
-          itemStatus: target.status,
-          itemContact: target.contact,
-          itemLocation: target.location,
-          claimDate: target.claim_date,
-          claimerNickname: target.claimer_name,
-          claimRecordedAt: target.claim_created_at,
+          snapshot: {
+            item: {
+              id: target.id,
+              title: target.title,
+              description: target.description ?? null,
+              location: target.location ?? null,
+              date: target.date ?? null,
+              contact: target.contact ?? null,
+              bonus_price: target.bonus_price ?? null,
+              status: target.status,
+              color: target.color ?? null,
+              custom_color: target.custom_color ?? null,
+              image_url: target.image_url ?? null,
+              created_at: target.created_at ?? null,
+              moderation_status: target.moderation_status ?? null,
+            },
+            claim: {
+              id: target.claim_id ?? null,
+              item_id: target.claim_item_id ?? null,
+              claimer_name: target.claimer_name ?? null,
+              claim_location: target.claim_location ?? null,
+              claim_date: target.claim_date ?? null,
+              created_at: target.claim_created_at ?? null,
+            },
+          },
           deletedAt,
         });
       } catch (error) {
