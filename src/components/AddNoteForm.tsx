@@ -101,6 +101,7 @@ const AddNoteForm: React.FC<AddNoteFormProps> = ({
       customColor: '\u81ea\u5b9a\u4e49\u989c\u8272',
       customColorSelected: '\u5df2\u9009\u62e9\u81ea\u5b9a\u4e49\u989c\u8272\uff1a',
       website: '\u7f51\u7ad9',
+      reviewNotice: '\u63d0\u4ea4\u540e\u9884\u8ba1\u9700\u8981 1-2 \u5929\u5b8c\u6210\u5ba1\u6838\u3002',
       cancel: '\u53d6\u6d88',
       submitting: '\u63d0\u4ea4\u4e2d...',
       addLost: '\u53d1\u5e03\u5931\u7269',
@@ -146,6 +147,7 @@ const AddNoteForm: React.FC<AddNoteFormProps> = ({
       customColor: 'Custom color',
       customColorSelected: 'Custom color selected:',
       website: 'Website',
+      reviewNotice: 'After submission, approval usually takes about 1-2 days.',
       cancel: 'Cancel',
       submitting: 'Submitting...',
       addLost: 'Add Lost Item',
@@ -575,6 +577,9 @@ const AddNoteForm: React.FC<AddNoteFormProps> = ({
 
             {submitError && <p className="text-sm text-red-600">{submitError}</p>}
             {imageError && <p className="text-sm text-red-600">{imageError}</p>}
+            <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+              {text.reviewNotice}
+            </p>
 
             <div className="flex gap-3 pt-4">
               <button
