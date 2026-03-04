@@ -1,8 +1,5 @@
 interface Env {
   DB: D1Database;
-  GITHUB_BACKUP_TOKEN?: string;
-  GITHUB_BACKUP_REPO?: string;
-  GITHUB_BACKUP_BRANCH?: string;
 }
 
 interface ClaimPayload {
@@ -20,77 +17,6 @@ const json = (body: unknown, status = 200): Response =>
 const normalizeText = (value: unknown): string =>
   typeof value === 'string' ? value.trim() : '';
 
-const encodeBase64 = (value: string): string => {
-  const bytes = new TextEncoder().encode(value);
-  let binary = '';
-  for (const b of bytes) binary += String.fromCharCode(b);
-  return btoa(binary);
-};
-
-const toSafeFileTitle = (title: string): string => {
-  const safe = title
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 60);
-  return safe || 'item';
-};
-
-const toCommitTitle = (title: string, itemId: number): string => {
-  const trimmed = title.trim();
-  return trimmed || `item ${itemId}`;
-};
-
-const backupClaimToGitHub = async (
-  env: Env,
-  data: {
-    itemId: number;
-    itemTitle: string;
-    itemStatus: 'lost' | 'found';
-    itemContact: string;
-    itemLocation: string;
-    claimDate: string;
-    claimerNickname: string | null;
-    recordedAt: string;
-  }
-): Promise<void> => {
-  const token = (env.GITHUB_BACKUP_TOKEN || '').trim();
-  if (!token) return;
-
-  const repo = (env.GITHUB_BACKUP_REPO || 'C0lor4/Database-No2').trim();
-  const branch = (env.GITHUB_BACKUP_BRANCH || 'main').trim();
-
-  const now = new Date(data.recordedAt);
-  const yyyy = now.getUTCFullYear();
-  const mm = String(now.getUTCMonth() + 1).padStart(2, '0');
-  const dd = String(now.getUTCDate()).padStart(2, '0');
-  const stamp = now.toISOString().replace(/[:.]/g, '-');
-  const safeTitle = toSafeFileTitle(data.itemTitle);
-  const commitTitle = toCommitTitle(data.itemTitle, data.itemId);
-  const path = `claims/${yyyy}/${mm}/${dd}/${safeTitle}-${data.itemId}-${stamp}.json`;
-
-  const content = JSON.stringify(data, null, 2) + '\n';
-  const response = await fetch(`https://api.github.com/repos/${repo}/contents/${path}`, {
-    method: 'PUT',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-      Accept: 'application/vnd.github+json',
-      'User-Agent': 'lost-found-claims-backup',
-    },
-    body: JSON.stringify({
-      message: `backup: claim for ${commitTitle}`,
-      content: encodeBase64(content),
-      branch,
-    }),
-  });
-
-  if (!response.ok) {
-    const body = await response.text();
-    throw new Error(`GitHub backup failed (${response.status}): ${body}`);
-  }
-};
 
 const ensureClaimsSchema = async (db: D1Database): Promise<void> => {
   await db
@@ -251,21 +177,6 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   const createdAt = new Date().toISOString();
   try {
     await tryInsertClaim(env.DB, id, claimerNickname || '', claimDate, createdAt);
-
-    try {
-      await backupClaimToGitHub(env, {
-        itemId: id,
-        itemTitle: item.title,
-        itemStatus: item.status,
-        itemContact: item.contact,
-        itemLocation: item.location,
-        claimDate,
-        claimerNickname: claimerNickname || null,
-        recordedAt: createdAt,
-      });
-    } catch (backupError) {
-      console.error('Claim saved but GitHub backup failed:', backupError);
-    }
   } catch (error) {
     console.error('Failed to insert claim:', error);
     const detail = error instanceof Error ? error.message : String(error);

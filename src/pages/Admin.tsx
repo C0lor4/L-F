@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Check, X, Trash2, LogOut, Shield, AlertCircle, ArrowLeft } from 'lucide-react';
+import { Check, X, Trash2, LogOut, Shield, AlertCircle, ArrowLeft, RotateCcw } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { LostFoundItem } from '../types';
 
@@ -95,7 +95,7 @@ const Admin: React.FC = () => {
     setCounts({ pending: 0, approved: 0, rejected: 0 });
   };
 
-  const handleAction = async (itemId: string, action: 'approve' | 'reject' | 'delete') => {
+  const handleAction = async (itemId: string, action: 'approve' | 'reject' | 'delete' | 'unclaim') => {
     setActionLoading(itemId);
     try {
       const response = await fetch(API_ENDPOINT, {
@@ -342,6 +342,16 @@ const Admin: React.FC = () => {
                           <X className="w-5 h-5" />
                         </button>
                       </>
+                    )}
+                    {item.claimed && (
+                      <button
+                        onClick={() => handleAction(item.id, 'unclaim')}
+                        disabled={actionLoading === item.id}
+                        className="p-2 bg-amber-100 text-amber-700 rounded-lg hover:bg-amber-200 transition-colors disabled:opacity-50"
+                        title="Unclaim"
+                      >
+                        <RotateCcw className="w-5 h-5" />
+                      </button>
                     )}
                     <button
                       onClick={() => handleAction(item.id, 'delete')}
