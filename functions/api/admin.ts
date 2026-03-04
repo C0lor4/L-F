@@ -160,7 +160,8 @@ const backupDeletedClaimToGitHub = async (
   const stamp = now.toISOString().replace(/[:.]/g, '-');
   const safeTitle = toSafeFileTitle(data.itemTitle);
   const commitTitle = toCommitTitle(data.itemTitle, data.itemId);
-  const path = `claims/${yyyy}/${mm}/${dd}/deleted-${safeTitle}-${data.itemId}-${stamp}.json`;
+  const dayFolder = `${yyyy}-${mm}-${dd}`;
+  const path = `claims/${dayFolder}/deleted-${safeTitle}-${data.itemId}-${stamp}.json`;
 
   const content = JSON.stringify(
     {
