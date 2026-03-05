@@ -9,7 +9,6 @@ interface HeaderProps {
   onFilter: (status: ItemStatus | 'all') => void;
   currentFilter: ItemStatus | 'all';
   language: Language;
-  onLanguageToggle: () => void;
 }
 
 const Header: React.FC<HeaderProps> = ({
@@ -17,7 +16,6 @@ const Header: React.FC<HeaderProps> = ({
   onFilter,
   currentFilter,
   language,
-  onLanguageToggle,
 }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -164,14 +162,6 @@ const Header: React.FC<HeaderProps> = ({
                 }`}
               />
             </div>
-            <button
-              type="button"
-              onClick={onLanguageToggle}
-              className="px-3 py-2 text-sm font-semibold border border-gray-300 rounded-lg bg-white text-gray-700 hover:bg-gray-50"
-              title="Toggle language"
-            >
-              {language === 'en' ? 'EN' : 'CN'}
-            </button>
           </div>
 
           <div className="md:hidden ml-auto flex items-center gap-2">
@@ -218,13 +208,6 @@ const Header: React.FC<HeaderProps> = ({
         {isMenuOpen && (
           <div className="md:hidden mt-4 pb-4 border-t border-gray-200">
             <div className="flex flex-col space-y-3 pt-4">
-              <button
-                type="button"
-                onClick={onLanguageToggle}
-                className="self-start w-auto px-4 py-2 rounded-lg transition-colors text-gray-700 hover:bg-gray-50 border border-gray-200"
-              >
-                {language === 'en' ? 'EN' : 'CN'}
-              </button>
               <button
                 onClick={() => {
                   onFilter('all');
