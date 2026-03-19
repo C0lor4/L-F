@@ -30,6 +30,7 @@ const Admin: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState('');
   const [authError, setAuthError] = useState<string | null>(null);
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [counts, setCounts] = useState<ModerationCounts>({
     pending: 0,
@@ -78,14 +79,34 @@ const Admin: React.FC = () => {
     }
   }, [isAuthenticated, filter]);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!password.trim()) {
       setAuthError('Please enter a password');
       return;
     }
-    setIsAuthenticated(true);
     setAuthError(null);
+    setIsAuthenticating(true);
+    try {
+      const response = await fetch(`${API_ENDPOINT}?status=pending`, {
+        headers: {
+          Authorization: `Bearer ${password}`,
+        },
+      });
+      if (response.status === 401) {
+        setAuthError('Invalid password');
+        return;
+      }
+      if (!response.ok) {
+        throw new Error(`Login failed (${response.status})`);
+      }
+      setIsAuthenticated(true);
+    } catch (error) {
+      console.error('Failed to login:', error);
+      setAuthError('Unable to verify password right now. Please try again.');
+    } finally {
+      setIsAuthenticating(false);
+    }
   };
 
   const handleLogout = () => {
@@ -162,6 +183,7 @@ const Admin: React.FC = () => {
                 onChange={(e) => setPassword(e.target.value)}
                 className="form-input"
                 placeholder="Enter your admin password"
+                disabled={isAuthenticating}
                 required
               />
             </div>
@@ -170,9 +192,10 @@ const Admin: React.FC = () => {
             )}
             <button
               type="submit"
+              disabled={isAuthenticating}
               className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
             >
-              Login
+              {isAuthenticating ? 'Verifying...' : 'Login'}
             </button>
           </form>
         </motion.div>
