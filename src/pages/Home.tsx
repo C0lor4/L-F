@@ -5,6 +5,7 @@ import StickyBoard from '../components/StickyBoard';
 import AddNoteForm from '../components/AddNoteForm';
 import ItemDetailModal from '../components/ItemDetailModal';
 import { LostFoundItem, FilterOptions, ItemStatus } from '../types';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 const API_ENDPOINT = '/api/items';
 const CLAIM_API_ENDPOINT = '/api/claims';
@@ -27,6 +28,8 @@ const Home: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [language] = useState<Language>('cn');
+  const location = useLocation();
+  const navigate = useNavigate();
 
   const fetchItems = async () => {
     setLoadError(null);
@@ -75,12 +78,15 @@ const Home: React.FC = () => {
     }
   };
 
-  const handleSearch = (query: string) => {
-    setFilter((prev) => ({ ...prev, search: query }));
+  const handleFilter = (status: ItemStatus | 'all') => {
+    if (location.pathname === '/info') {
+      navigate('/');
+    }
+    setFilter((prev) => ({ ...prev, status }));
   };
 
-  const handleFilter = (status: ItemStatus | 'all') => {
-    setFilter((prev) => ({ ...prev, status }));
+  const handleSearch = (query: string) => {
+    setFilter((prev) => ({ ...prev, search: query }));
   };
 
   const handleSortBy = (sortBy: FilterOptions['sortBy']) => {
@@ -90,6 +96,8 @@ const Home: React.FC = () => {
   const handleSortOrder = (sortOrder: FilterOptions['sortOrder']) => {
     setFilter((prev) => ({ ...prev, sortOrder }));
   };
+
+  const showInfoSection = location.pathname === '/info';
 
   const heroCopy = filter.status === 'lost'
     ? {
@@ -147,112 +155,117 @@ const Home: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex flex-col">
       <Header
-        onSearch={handleSearch}
         onFilter={handleFilter}
         currentFilter={filter.status}
         language={language}
+        onSearch={handleSearch}
       />
 
       <main className="flex-1">
-        <div className="pt-24 pb-8 px-4 sm:px-6 lg:px-8">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="max-w-4xl mx-auto text-center"
-          >
-            <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-4">
-              <span className={filter.status === 'lost' ? 'text-red-600' : 'text-gray-900'}>
-                {language === 'cn' ? '\u5931\u7269' : 'Lost'}
-              </span>
-              <span className="text-gray-900"> & </span>
-              <span className={filter.status === 'found' ? 'text-green-600' : 'text-gray-900'}>
-                {language === 'cn' ? '\u62db\u9886' : 'Found'}
-              </span>
-              <span className="text-gray-900">
-                {language === 'cn' ? '\u516c\u544a\u677f' : ' Board'}
-              </span>
-            </h1>
-            <p className="text-lg text-gray-600">
-              {heroCopy.description}
-            </p>
-            <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
-              <label className="text-sm font-medium text-gray-700">
-                {sortText.label}
-              </label>
-              <select
-                value={filter.sortBy}
-                onChange={(e) => handleSortBy(e.target.value as FilterOptions['sortBy'])}
-                className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+        {showInfoSection ? (
+          <section className="min-h-[calc(100vh-6rem)] flex items-center justify-center px-4 sm:px-6 lg:px-8">
+            <h2 className="text-3xl sm:text-5xl font-bold text-gray-900 text-center">
+              Information
+            </h2>
+          </section>
+        ) : (
+          <>
+            <div className="pt-24 pb-8 px-4 sm:px-6 lg:px-8">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="max-w-4xl mx-auto text-center"
               >
-                <option value="date">{sortText.time}</option>
-                <option value="title">{sortText.name}</option>
-                <option value="bonus">{sortText.bonus}</option>
-              </select>
-              <button
-                type="button"
-                onClick={() => handleSortOrder(filter.sortOrder === 'asc' ? 'desc' : 'asc')}
-                className="px-3 py-2 text-sm font-medium border border-gray-300 rounded-lg bg-white text-gray-700 hover:bg-gray-50"
-              >
-                {filter.sortOrder === 'asc' ? sortText.ascending : sortText.descending}
-              </button>
-              <button
-                type="button"
-                onClick={() => setFilter((prev) => ({ ...prev, showClaimed: !prev.showClaimed }))}
-                className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium border border-gray-300 rounded-lg bg-white text-gray-700 hover:bg-gray-50"
-                title={sortText.showClaimed}
-              >
-                <span>{sortText.showClaimed}</span>
-                <span
-                  className={`relative inline-flex w-11 h-6 rounded-full transition-colors overflow-hidden ${
-                    filter.showClaimed ? 'bg-blue-600' : 'bg-gray-300'
-                  }`}
-                >
-                  <span
-                    className={`absolute left-0.5 top-0.5 w-5 h-5 rounded-full bg-white transition-transform ${
-                      filter.showClaimed ? 'translate-x-5' : 'translate-x-0'
-                    }`}
-                  />
-                </span>
-              </button>
+                <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-4">
+                  <span className={filter.status === 'lost' ? 'text-red-600' : 'text-gray-900'}>
+                    {language === 'cn' ? '\u5931\u7269' : 'Lost'}
+                  </span>
+                  <span className="text-gray-900"> & </span>
+                  <span className={filter.status === 'found' ? 'text-green-600' : 'text-gray-900'}>
+                    {language === 'cn' ? '\u62db\u9886' : 'Found'}
+                  </span>
+                  <span className="text-gray-900">
+                    {language === 'cn' ? '\u516c\u544a\u677f' : ' Board'}
+                  </span>
+                </h1>
+                <p className="text-lg text-gray-600">
+                  {heroCopy.description}
+                </p>
+                <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
+                  <label className="text-sm font-medium text-gray-700">
+                    {sortText.label}
+                  </label>
+                  <select
+                    value={filter.sortBy}
+                    onChange={(e) => handleSortBy(e.target.value as FilterOptions['sortBy'])}
+                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="date">{sortText.time}</option>
+                    <option value="title">{sortText.name}</option>
+                    <option value="bonus">{sortText.bonus}</option>
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => handleSortOrder(filter.sortOrder === 'asc' ? 'desc' : 'asc')}
+                    className="px-3 py-2 text-sm font-medium border border-gray-300 rounded-lg bg-white text-gray-700 hover:bg-gray-50"
+                  >
+                    {filter.sortOrder === 'asc' ? sortText.ascending : sortText.descending}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFilter((prev) => ({ ...prev, showClaimed: !prev.showClaimed }))}
+                    className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium border border-gray-300 rounded-lg bg-white text-gray-700 hover:bg-gray-50"
+                    title={sortText.showClaimed}
+                  >
+                    <span>{sortText.showClaimed}</span>
+                    <span
+                      className={`relative inline-flex w-11 h-6 rounded-full transition-colors overflow-hidden ${
+                        filter.showClaimed ? 'bg-blue-600' : 'bg-gray-300'
+                      }`}
+                    >
+                      <span
+                        className={`absolute left-0.5 top-0.5 w-5 h-5 rounded-full bg-white transition-transform ${
+                          filter.showClaimed ? 'translate-x-5' : 'translate-x-0'
+                        }`}
+                      />
+                    </span>
+                  </button>
+                </div>
+              </motion.div>
             </div>
-            {isLoading && (
-              <p className="mt-2 text-sm text-gray-500">
-                {language === 'cn' ? '\u6b63\u5728\u52a0\u8f7d\u7269\u54c1...' : 'Loading items...'}
-              </p>
-            )}
-            {loadError && (
-              <p className="mt-2 text-sm text-red-600">
-                {language === 'cn' ? '\u52a0\u8f7d\u6700\u65b0\u7269\u54c1\u5931\u8d25\u3002' : loadError}
-              </p>
-            )}
-          </motion.div>
-        </div>
 
-        <StickyBoard
-          items={items}
-          filter={filter}
-          onNoteClick={setSelectedItem}
-          onAddClick={() => setIsAddFormOpen(true)}
-          language={language}
-        />
+            <StickyBoard
+              items={items}
+              filter={filter}
+              onNoteClick={setSelectedItem}
+              onAddClick={() => setIsAddFormOpen(true)}
+              language={language}
+              isLoading={isLoading || Boolean(loadError)}
+            />
+          </>
+        )}
       </main>
 
-      <AddNoteForm
-        isOpen={isAddFormOpen}
-        onClose={() => setIsAddFormOpen(false)}
-        onSubmit={handleAddItem}
-        isSubmitting={isSubmitting}
-        submitError={submitError}
-        language={language}
-      />
+      {!showInfoSection && (
+        <>
+          <AddNoteForm
+            isOpen={isAddFormOpen}
+            onClose={() => setIsAddFormOpen(false)}
+            onSubmit={handleAddItem}
+            isSubmitting={isSubmitting}
+            submitError={submitError}
+            language={language}
+          />
 
-      <ItemDetailModal
-        item={selectedItem}
-        isOpen={selectedItem !== null}
-        onClose={() => setSelectedItem(null)}
-        onClaim={handleClaimItem}
-        language={language}
-      />
+          <ItemDetailModal
+            item={selectedItem}
+            isOpen={selectedItem !== null}
+            onClose={() => setSelectedItem(null)}
+            onClaim={handleClaimItem}
+            language={language}
+          />
+        </>
+      )}
     </div>
   );
 };

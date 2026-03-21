@@ -228,12 +228,12 @@ const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
               </div>
             </div>
 
-            {item.status === 'lost' && item.bonusPrice && (
+            {item.status === 'lost' && (
               <div className="flex items-start gap-3">
                 <Gift className="w-5 h-5 text-gray-600 flex-shrink-0 mt-0.5" />
                 <div>
                   <p className="text-sm font-medium text-gray-900">{text.reward}</p>
-                  <p className="text-gray-700">{item.bonusPrice}</p>
+                  <p className="text-gray-700">{item.bonusPrice?.trim() || '0'}</p>
                 </div>
               </div>
             )}

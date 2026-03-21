@@ -164,14 +164,12 @@ const StickyNote: React.FC<StickyNoteProps> = ({ item, onClick, language, search
           <Calendar className="w-3.5 h-3.5" />
           <span>{new Date(item.date).toLocaleDateString()}</span>
         </div>
-        {item.bonusPrice && (
-          <div className="flex items-center gap-2">
-            <Gift className="w-3.5 h-3.5" />
-            <span className="truncate">
-              {text.reward}: {renderHighlighted(item.bonusPrice)}
-            </span>
-          </div>
-        )}
+        <div className="flex items-center gap-2">
+          <Gift className="w-3.5 h-3.5" />
+          <span className="truncate">
+            {text.reward}: {renderHighlighted(item.bonusPrice?.trim() || '0')}
+          </span>
+        </div>
       </div>
 
       {item.imageUrl && (

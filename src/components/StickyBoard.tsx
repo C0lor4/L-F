@@ -12,6 +12,7 @@ interface StickyBoardProps {
   onNoteClick: (item: LostFoundItem) => void;
   onAddClick: () => void;
   language: Language;
+  isLoading?: boolean;
 }
 
 const StickyBoard: React.FC<StickyBoardProps> = ({
@@ -20,6 +21,7 @@ const StickyBoard: React.FC<StickyBoardProps> = ({
   onNoteClick,
   onAddClick,
   language,
+  isLoading = false,
 }) => {
   const text = language === 'cn'
     ? {
@@ -88,7 +90,13 @@ const StickyBoard: React.FC<StickyBoardProps> = ({
         <Plus className="w-6 h-6" />
       </motion.button>
 
-      {filteredItems.length === 0 ? (
+      {isLoading && filteredItems.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-20 text-gray-500">
+          <p className="text-xl mb-2">
+            {language === 'cn' ? '加载中...' : 'Loading...'}
+          </p>
+        </div>
+      ) : filteredItems.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-gray-500">
           <p className="text-xl mb-2">{text.noItems}</p>
           <p className="text-sm">{text.hint}</p>

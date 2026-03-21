@@ -1,13 +1,14 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import Home from './src/pages/Home';
 import Admin from './src/pages/Admin';
 import NotFound from './src/pages/NotFound';
 
 const ScrollToTop: React.FC = () => {
+  const location = useLocation();
   React.useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
-  }, []);
+  }, [location.pathname]);
 
   return null;
 };
@@ -19,6 +20,7 @@ const App: React.FC = () => {
       <main className="min-h-screen font-inter">
         <Routes>
           <Route path="/" element={<Home />} />
+          <Route path="/info" element={<Home />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="*" element={<NotFound />} />
         </Routes>

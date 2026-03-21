@@ -1,21 +1,22 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Menu, X, Search } from 'lucide-react';
+import { Link, useLocation } from 'react-router-dom';
 import { ItemStatus } from '../types';
 
 type Language = 'en' | 'cn';
 
 interface HeaderProps {
-  onSearch: (query: string) => void;
   onFilter: (status: ItemStatus | 'all') => void;
   currentFilter: ItemStatus | 'all';
   language: Language;
+  onSearch: (query: string) => void;
 }
 
 const Header: React.FC<HeaderProps> = ({
-  onSearch,
   onFilter,
   currentFilter,
   language,
+  onSearch,
 }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -25,6 +26,7 @@ const Header: React.FC<HeaderProps> = ({
   const mobileSearchTriggerRef = useRef<HTMLButtonElement | null>(null);
   const desktopSearchInputRef = useRef<HTMLInputElement | null>(null);
   const mobileSearchInputRef = useRef<HTMLInputElement | null>(null);
+  const location = useLocation();
 
   const text = language === 'cn'
     ? {
@@ -32,6 +34,7 @@ const Header: React.FC<HeaderProps> = ({
       allItems: '\u5168\u90e8',
       lost: '\u5931\u7269',
       found: '\u62db\u9886',
+      info: '\u4fe1\u606f',
       search: '\u641c\u7d22\u7269\u54c1...',
     }
     : {
@@ -39,27 +42,19 @@ const Header: React.FC<HeaderProps> = ({
       allItems: 'All Items',
       lost: 'Lost',
       found: 'Found',
+      info: 'Info',
       search: 'Search items...',
     };
+  const isInfoActive = location.pathname === '/info';
 
   useEffect(() => {
-    if (isSearchOpen) {
-      requestAnimationFrame(() => {
-        const desktopInput = desktopSearchInputRef.current;
-        const mobileInput = mobileSearchInputRef.current;
-        if (desktopInput && desktopInput.offsetParent !== null) {
-          desktopInput.focus();
-          return;
-        }
-        if (mobileInput && mobileInput.offsetParent !== null) {
-          mobileInput.focus();
-        }
-      });
+    if (isInfoActive && isSearchOpen) {
+      setIsSearchOpen(false);
     }
-  }, [isSearchOpen]);
+  }, [isInfoActive, isSearchOpen]);
 
   useEffect(() => {
-    if (!isSearchOpen) return;
+    if (!isSearchOpen || isInfoActive) return;
     const handleDocumentPointerDown = (event: MouseEvent) => {
       const target = event.target as Node;
       const inDesktop = desktopSearchWrapRef.current?.contains(target);
@@ -73,7 +68,22 @@ const Header: React.FC<HeaderProps> = ({
     return () => {
       document.removeEventListener('mousedown', handleDocumentPointerDown);
     };
-  }, [isSearchOpen]);
+  }, [isSearchOpen, isInfoActive]);
+
+  useEffect(() => {
+    if (!isSearchOpen || isInfoActive) return;
+    requestAnimationFrame(() => {
+      const desktopInput = desktopSearchInputRef.current;
+      const mobileInput = mobileSearchInputRef.current;
+      if (desktopInput && desktopInput.offsetParent !== null) {
+        desktopInput.focus();
+        return;
+      }
+      if (mobileInput && mobileInput.offsetParent !== null) {
+        mobileInput.focus();
+      }
+    });
+  }, [isSearchOpen, isInfoActive]);
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     const query = e.target.value;
@@ -93,7 +103,7 @@ const Header: React.FC<HeaderProps> = ({
     <header className="fixed top-0 left-0 right-0 z-40 bg-white/80 backdrop-blur-sm border-b border-gray-200 shadow-sm">
       <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
         <div className="relative flex items-center">
-          <div className="flex items-center gap-2 min-w-[170px]">
+          <Link to="/" className="flex items-center gap-2 min-w-[170px]">
             <img
               src="/logo.png"
               alt="Logo"
@@ -102,7 +112,7 @@ const Header: React.FC<HeaderProps> = ({
             <span className="text-lg sm:text-xl font-bold text-gray-900 whitespace-nowrap">
               {text.brand}
             </span>
-          </div>
+          </Link>
 
           <div className="hidden md:flex items-center gap-6 absolute left-1/2 -translate-x-1/2">
             <button
@@ -129,13 +139,21 @@ const Header: React.FC<HeaderProps> = ({
             >
               {text.found}
             </button>
+            <Link
+              to="/info"
+              className={`text-sm font-medium transition-colors ${
+                isInfoActive ? 'text-blue-600' : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              {text.info}
+            </Link>
           </div>
 
-          <div className="hidden md:flex items-center gap-2 ml-auto">
+          <div className="hidden md:flex items-center gap-2 ml-auto shrink-0">
             <div
               ref={desktopSearchWrapRef}
               className={`relative h-10 rounded-full border border-gray-300 bg-white overflow-hidden transition-[width] duration-300 ${
-                isSearchOpen ? 'w-72' : 'w-10'
+                isInfoActive ? 'w-72 opacity-0 pointer-events-none' : isSearchOpen ? 'w-72' : 'w-10'
               }`}
             >
               <button
@@ -158,7 +176,7 @@ const Header: React.FC<HeaderProps> = ({
                   }
                 }}
                 className={`h-full w-full bg-transparent pl-10 pr-3 text-sm outline-none transition-opacity duration-200 ${
-                  isSearchOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+                  isInfoActive ? 'opacity-0 pointer-events-none' : isSearchOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
                 }`}
               />
             </div>
@@ -169,7 +187,9 @@ const Header: React.FC<HeaderProps> = ({
               ref={mobileSearchTriggerRef}
               type="button"
               onClick={toggleSearch}
-              className="w-10 h-10 p-0 leading-none border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 flex items-center justify-center"
+              className={`w-10 h-10 p-0 leading-none border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 flex items-center justify-center ${
+                isInfoActive ? 'opacity-0 pointer-events-none' : ''
+              }`}
               aria-label="Toggle search"
             >
               <Search className="block w-5 h-5" />
@@ -184,7 +204,7 @@ const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
 
-        {isSearchOpen && (
+        {!isInfoActive && isSearchOpen && (
           <div ref={mobileSearchPanelRef} className="md:hidden mt-3">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -241,6 +261,15 @@ const Header: React.FC<HeaderProps> = ({
               >
                 {text.found}
               </button>
+              <Link
+                to="/info"
+                onClick={() => setIsMenuOpen(false)}
+                className={`text-left px-4 py-2 rounded-lg transition-colors ${
+                  isInfoActive ? 'bg-blue-50 text-blue-600' : 'text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                {text.info}
+              </Link>
             </div>
           </div>
         )}
