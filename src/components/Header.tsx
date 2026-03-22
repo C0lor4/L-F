@@ -118,7 +118,7 @@ const Header: React.FC<HeaderProps> = ({
             <button
               onClick={() => onFilter('all')}
               className={`text-sm font-medium transition-colors ${
-                currentFilter === 'all' ? 'text-blue-600' : 'text-gray-600 hover:text-gray-900'
+                isInfoActive ? 'text-gray-600 hover:text-gray-900' : currentFilter === 'all' ? 'text-blue-600' : 'text-gray-600 hover:text-gray-900'
               }`}
             >
               {text.allItems}
@@ -126,7 +126,7 @@ const Header: React.FC<HeaderProps> = ({
             <button
               onClick={() => onFilter('lost')}
               className={`text-sm font-medium transition-colors ${
-                currentFilter === 'lost' ? 'text-red-600' : 'text-gray-600 hover:text-gray-900'
+                isInfoActive ? 'text-gray-600 hover:text-gray-900' : currentFilter === 'lost' ? 'text-red-600' : 'text-gray-600 hover:text-gray-900'
               }`}
             >
               {text.lost}
@@ -134,7 +134,7 @@ const Header: React.FC<HeaderProps> = ({
             <button
               onClick={() => onFilter('found')}
               className={`text-sm font-medium transition-colors ${
-                currentFilter === 'found' ? 'text-green-600' : 'text-gray-600 hover:text-gray-900'
+                isInfoActive ? 'text-gray-600 hover:text-gray-900' : currentFilter === 'found' ? 'text-green-600' : 'text-gray-600 hover:text-gray-900'
               }`}
             >
               {text.found}
@@ -234,7 +234,7 @@ const Header: React.FC<HeaderProps> = ({
                   setIsMenuOpen(false);
                 }}
                 className={`text-left px-4 py-2 rounded-lg transition-colors ${
-                  currentFilter === 'all' ? 'bg-blue-50 text-blue-600' : 'text-gray-600 hover:bg-gray-50'
+                  isInfoActive ? 'text-gray-600 hover:bg-gray-50' : currentFilter === 'all' ? 'bg-blue-50 text-blue-600' : 'text-gray-600 hover:bg-gray-50'
                 }`}
               >
                 {text.allItems}
@@ -245,7 +245,7 @@ const Header: React.FC<HeaderProps> = ({
                   setIsMenuOpen(false);
                 }}
                 className={`text-left px-4 py-2 rounded-lg transition-colors ${
-                  currentFilter === 'lost' ? 'bg-red-50 text-red-600' : 'text-gray-600 hover:bg-gray-50'
+                  isInfoActive ? 'text-gray-600 hover:bg-gray-50' : currentFilter === 'lost' ? 'bg-red-50 text-red-600' : 'text-gray-600 hover:bg-gray-50'
                 }`}
               >
                 {text.lost}
@@ -256,7 +256,7 @@ const Header: React.FC<HeaderProps> = ({
                   setIsMenuOpen(false);
                 }}
                 className={`text-left px-4 py-2 rounded-lg transition-colors ${
-                  currentFilter === 'found' ? 'bg-green-50 text-green-600' : 'text-gray-600 hover:bg-gray-50'
+                  isInfoActive ? 'text-gray-600 hover:bg-gray-50' : currentFilter === 'found' ? 'bg-green-50 text-green-600' : 'text-gray-600 hover:bg-gray-50'
                 }`}
               >
                 {text.found}

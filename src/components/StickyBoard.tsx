@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus } from 'lucide-react';
 import StickyNote from './StickyNote';
@@ -25,12 +25,14 @@ const StickyBoard: React.FC<StickyBoardProps> = ({
 }) => {
   const text = language === 'cn'
     ? {
-      noItems: '\u6682\u65e0\u7269\u54c1',
-      hint: '\u8bf7\u8c03\u6574\u7b5b\u9009\u6761\u4ef6\uff0c\u6216\u53d1\u5e03\u4e00\u4e2a\u65b0\u7269\u54c1',
+      noItems: '暂无物品',
+      hint: '请调整筛选条件，或发布一个新物品',
+      loading: '加载中...',
     }
     : {
       noItems: 'No items found',
       hint: 'Try adjusting your filters or add a new item',
+      loading: 'Loading...',
     };
 
   const filteredItems = React.useMemo(() => {
@@ -79,6 +81,8 @@ const StickyBoard: React.FC<StickyBoardProps> = ({
       });
   }, [items, filter]);
 
+  const loadingChars = Array.from(text.loading);
+
   return (
     <div className="relative">
       <motion.button
@@ -92,8 +96,22 @@ const StickyBoard: React.FC<StickyBoardProps> = ({
 
       {isLoading && filteredItems.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-gray-500">
-          <p className="text-xl mb-2">
-            {language === 'cn' ? '加载中...' : 'Loading...'}
+          <p className="text-xl mb-2 flex items-center gap-0.5">
+            {loadingChars.map((char, index) => (
+              <motion.span
+                key={`${char}-${index}`}
+                animate={{ y: [0, -2, 0] }}
+                transition={{
+                  duration: 1.6,
+                  repeat: Infinity,
+                  ease: 'easeInOut',
+                  delay: index * 0.14,
+                }}
+                className="inline-block"
+              >
+                {char === ' ' ? '\u00A0' : char}
+              </motion.span>
+            ))}
           </p>
         </div>
       ) : filteredItems.length === 0 ? (

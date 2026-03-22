@@ -108,7 +108,7 @@ const Home: React.FC = () => {
     : filter.status === 'found'
       ? {
         description: language === 'cn'
-          ? '\u67e5\u770b\u62db\u9886\u4fe1\u606f\uff0c\u628a\u7269\u54c1\u5c3d\u5feb\u5f52\u8fd8\u7ed9\u5931\u4e3b\u3002'
+          ? '已找到的物品信息，方便失主联系领取。'
           : 'Review found items and connect them back to their owners.',
       }
       : {
@@ -163,12 +163,35 @@ const Home: React.FC = () => {
 
       <main className="flex-1">
         {showInfoSection ? (
-          <section className="min-h-[calc(100vh-6rem)] flex items-center justify-center px-4 sm:px-6 lg:px-8">
-            <h2 className="text-3xl sm:text-5xl font-bold text-gray-900 text-center">
-              Information
-            </h2>
-          </section>
-        ) : (
+          <section className="min-h-[calc(100vh-6rem)] flex items-center justify-center px-4 sm:px-6 lg:px-8 py-16">
+            <div className="max-w-3xl mx-auto text-center space-y-8">
+              <h2 className="text-3xl sm:text-5xl font-bold text-gray-900">
+                信息
+              </h2>
+
+              <div className="space-y-5 text-left text-gray-700 leading-8">
+                <p>
+                  这个网站会整理遗失和已找到的物品信息，方便大家快速获取线索并保持联系。
+                </p>
+                <p>
+                  <span className="font-semibold text-gray-900">失物</span>
+                  {' '}用于发布丢失物品的信息，比如外观、时间和地点，方便大家辨认。
+                </p>
+                <p>
+                  <span className="font-semibold text-gray-900">招领</span>
+                  {' '}用于发布已经找到的物品，方便失主对照信息后联系取回。
+                </p>
+              </div>
+
+              <div className="space-y-3 text-left text-gray-700 leading-8">
+                <h3 className="text-xl font-semibold text-gray-900">
+                  联系我们
+                </h3>
+                <p>Email: Paintedwolf193@gmail.com</p>
+                <p>Wechat: C0lor4</p>
+              </div>
+            </div>
+          </section>        ) : (
           <>
             <div className="pt-24 pb-8 px-4 sm:px-6 lg:px-8">
               <motion.div
